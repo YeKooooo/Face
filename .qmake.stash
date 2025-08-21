@@ -1,0 +1,21 @@
+QMAKE_CXX.QT_COMPILER_STDCXX = 201703L
+QMAKE_CXX.QMAKE_GCC_MAJOR_VERSION = 14
+QMAKE_CXX.QMAKE_GCC_MINOR_VERSION = 2
+QMAKE_CXX.QMAKE_GCC_PATCH_VERSION = 0
+QMAKE_CXX.COMPILER_MACROS = \
+    QT_COMPILER_STDCXX \
+    QMAKE_GCC_MAJOR_VERSION \
+    QMAKE_GCC_MINOR_VERSION \
+    QMAKE_GCC_PATCH_VERSION
+QMAKE_CXX.INCDIRS = \
+    "D:/Program Files/Compiler/x86_64-14.2.0-release-posix-seh-ucrt-rt_v12-rev2/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++" \
+    "D:/Program Files/Compiler/x86_64-14.2.0-release-posix-seh-ucrt-rt_v12-rev2/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/x86_64-w64-mingw32" \
+    "D:/Program Files/Compiler/x86_64-14.2.0-release-posix-seh-ucrt-rt_v12-rev2/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/backward" \
+    "D:/Program Files/Compiler/x86_64-14.2.0-release-posix-seh-ucrt-rt_v12-rev2/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include" \
+    "D:/Program Files/Compiler/x86_64-14.2.0-release-posix-seh-ucrt-rt_v12-rev2/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include-fixed" \
+    "D:/Program Files/Compiler/x86_64-14.2.0-release-posix-seh-ucrt-rt_v12-rev2/mingw64/x86_64-w64-mingw32/include"
+QMAKE_CXX.LIBDIRS = \
+    "D:/Program Files/Compiler/x86_64-14.2.0-release-posix-seh-ucrt-rt_v12-rev2/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0" \
+    "D:/Program Files/Compiler/x86_64-14.2.0-release-posix-seh-ucrt-rt_v12-rev2/mingw64/lib/gcc" \
+    "D:/Program Files/Compiler/x86_64-14.2.0-release-posix-seh-ucrt-rt_v12-rev2/mingw64/x86_64-w64-mingw32/lib" \
+    "D:/Program Files/Compiler/x86_64-14.2.0-release-posix-seh-ucrt-rt_v12-rev2/mingw64/lib"
