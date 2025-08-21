@@ -1,0 +1,233 @@
+[
+  {
+    "frame": 0,
+    "t": 0.0,
+    "filename": "frame_000_t0.00.png",
+    "description": "关怀→鼓励",
+    "params": {
+      "background_color": [
+        255,
+        182,
+        193
+      ],
+      "text_color": [
+        139,
+        69,
+        19
+      ],
+      "scale": 1.1,
+      "opacity": 0.9,
+      "emoji": "🤗"
+    }
+  },
+  {
+    "frame": 1,
+    "t": 0.1,
+    "filename": "frame_001_t0.10.png",
+    "description": "关怀→鼓励",
+    "params": {
+      "background_color": [
+        252,
+        182,
+        194
+      ],
+      "text_color": [
+        135,
+        67,
+        21
+      ],
+      "scale": 1.1056000000000001,
+      "opacity": 0.9028,
+      "emoji": "🤗"
+    }
+  },
+  {
+    "frame": 2,
+    "t": 0.2,
+    "filename": "frame_002_t0.20.png",
+    "description": "关怀→鼓励",
+    "params": {
+      "background_color": [
+        246,
+        185,
+        196
+      ],
+      "text_color": [
+        127,
+        64,
+        28
+      ],
+      "scale": 1.1208,
+      "opacity": 0.9104,
+      "emoji": "🤗"
+    }
+  },
+  {
+    "frame": 3,
+    "t": 0.3,
+    "filename": "frame_003_t0.30.png",
+    "description": "关怀→鼓励",
+    "params": {
+      "background_color": [
+        237,
+        189,
+        200
+      ],
+      "text_color": [
+        114,
+        59,
+        39
+      ],
+      "scale": 1.1432,
+      "opacity": 0.9216,
+      "emoji": "🤗"
+    }
+  },
+  {
+    "frame": 4,
+    "t": 0.4,
+    "filename": "frame_004_t0.40.png",
+    "description": "关怀→鼓励",
+    "params": {
+      "background_color": [
+        226,
+        193,
+        206
+      ],
+      "text_color": [
+        98,
+        53,
+        51
+      ],
+      "scale": 1.1704,
+      "opacity": 0.9352,
+      "emoji": "🤗"
+    }
+  },
+  {
+    "frame": 5,
+    "t": 0.5,
+    "filename": "frame_005_t0.50.png",
+    "description": "关怀→鼓励",
+    "params": {
+      "background_color": [
+        214,
+        199,
+        211
+      ],
+      "text_color": [
+        82,
+        47,
+        65
+      ],
+      "scale": 1.2000000000000002,
+      "opacity": 0.95,
+      "emoji": "💪"
+    }
+  },
+  {
+    "frame": 6,
+    "t": 0.6,
+    "filename": "frame_006_t0.60.png",
+    "description": "关怀→鼓励",
+    "params": {
+      "background_color": [
+        201,
+        204,
+        216
+      ],
+      "text_color": [
+        65,
+        40,
+        79
+      ],
+      "scale": 1.2296,
+      "opacity": 0.9648,
+      "emoji": "💪"
+    }
+  },
+  {
+    "frame": 7,
+    "t": 0.7,
+    "filename": "frame_007_t0.70.png",
+    "description": "关怀→鼓励",
+    "params": {
+      "background_color": [
+        190,
+        208,
+        222
+      ],
+      "text_color": [
+        49,
+        34,
+        91
+      ],
+      "scale": 1.2568000000000001,
+      "opacity": 0.9783999999999999,
+      "emoji": "💪"
+    }
+  },
+  {
+    "frame": 8,
+    "t": 0.8,
+    "filename": "frame_008_t0.80.png",
+    "description": "关怀→鼓励",
+    "params": {
+      "background_color": [
+        181,
+        212,
+        226
+      ],
+      "text_color": [
+        36,
+        29,
+        102
+      ],
+      "scale": 1.2792000000000001,
+      "opacity": 0.9896,
+      "emoji": "💪"
+    }
+  },
+  {
+    "frame": 9,
+    "t": 0.9,
+    "filename": "frame_009_t0.90.png",
+    "description": "关怀→鼓励",
+    "params": {
+      "background_color": [
+        175,
+        215,
+        228
+      ],
+      "text_color": [
+        28,
+        26,
+        109
+      ],
+      "scale": 1.2944,
+      "opacity": 0.9972,
+      "emoji": "💪"
+    }
+  },
+  {
+    "frame": 10,
+    "t": 1.0,
+    "filename": "frame_010_t1.00.png",
+    "description": "关怀→鼓励",
+    "params": {
+      "background_color": [
+        173,
+        216,
+        230
+      ],
+      "text_color": [
+        25,
+        25,
+        112
+      ],
+      "scale": 1.3,
+      "opacity": 1.0,
+      "emoji": "💪"
+    }
+  }
+]

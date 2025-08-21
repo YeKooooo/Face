@@ -1,0 +1,233 @@
+[
+  {
+    "frame": 0,
+    "t": 0.0,
+    "filename": "frame_000_t0.00.png",
+    "description": "中性→开心",
+    "params": {
+      "background_color": [
+        211,
+        211,
+        211
+      ],
+      "text_color": [
+        105,
+        105,
+        105
+      ],
+      "scale": 1.0,
+      "opacity": 0.8,
+      "emoji": "😐"
+    }
+  },
+  {
+    "frame": 1,
+    "t": 0.1,
+    "filename": "frame_001_t0.10.png",
+    "description": "中性→开心",
+    "params": {
+      "background_color": [
+        209,
+        211,
+        209
+      ],
+      "text_color": [
+        102,
+        104,
+        102
+      ],
+      "scale": 1.0056,
+      "opacity": 0.8056000000000001,
+      "emoji": "😐"
+    }
+  },
+  {
+    "frame": 2,
+    "t": 0.2,
+    "filename": "frame_002_t0.20.png",
+    "description": "中性→开心",
+    "params": {
+      "background_color": [
+        204,
+        213,
+        204
+      ],
+      "text_color": [
+        94,
+        104,
+        94
+      ],
+      "scale": 1.0208,
+      "opacity": 0.8208000000000001,
+      "emoji": "😐"
+    }
+  },
+  {
+    "frame": 3,
+    "t": 0.3,
+    "filename": "frame_003_t0.30.png",
+    "description": "中性→开心",
+    "params": {
+      "background_color": [
+        196,
+        216,
+        196
+      ],
+      "text_color": [
+        82,
+        103,
+        82
+      ],
+      "scale": 1.0432,
+      "opacity": 0.8432000000000001,
+      "emoji": "😐"
+    }
+  },
+  {
+    "frame": 4,
+    "t": 0.4,
+    "filename": "frame_004_t0.40.png",
+    "description": "中性→开心",
+    "params": {
+      "background_color": [
+        187,
+        220,
+        187
+      ],
+      "text_color": [
+        68,
+        103,
+        68
+      ],
+      "scale": 1.0704,
+      "opacity": 0.8704000000000001,
+      "emoji": "😐"
+    }
+  },
+  {
+    "frame": 5,
+    "t": 0.5,
+    "filename": "frame_005_t0.50.png",
+    "description": "中性→开心",
+    "params": {
+      "background_color": [
+        177,
+        224,
+        177
+      ],
+      "text_color": [
+        52,
+        102,
+        52
+      ],
+      "scale": 1.1,
+      "opacity": 0.9,
+      "emoji": "😊"
+    }
+  },
+  {
+    "frame": 6,
+    "t": 0.6,
+    "filename": "frame_006_t0.60.png",
+    "description": "中性→开心",
+    "params": {
+      "background_color": [
+        167,
+        228,
+        167
+      ],
+      "text_color": [
+        36,
+        101,
+        36
+      ],
+      "scale": 1.1296,
+      "opacity": 0.9296,
+      "emoji": "😊"
+    }
+  },
+  {
+    "frame": 7,
+    "t": 0.7,
+    "filename": "frame_007_t0.70.png",
+    "description": "中性→开心",
+    "params": {
+      "background_color": [
+        158,
+        232,
+        158
+      ],
+      "text_color": [
+        22,
+        101,
+        22
+      ],
+      "scale": 1.1568,
+      "opacity": 0.9568,
+      "emoji": "😊"
+    }
+  },
+  {
+    "frame": 8,
+    "t": 0.8,
+    "filename": "frame_008_t0.80.png",
+    "description": "中性→开心",
+    "params": {
+      "background_color": [
+        150,
+        235,
+        150
+      ],
+      "text_color": [
+        10,
+        100,
+        10
+      ],
+      "scale": 1.1792,
+      "opacity": 0.9792000000000001,
+      "emoji": "😊"
+    }
+  },
+  {
+    "frame": 9,
+    "t": 0.9,
+    "filename": "frame_009_t0.90.png",
+    "description": "中性→开心",
+    "params": {
+      "background_color": [
+        145,
+        237,
+        145
+      ],
+      "text_color": [
+        2,
+        100,
+        2
+      ],
+      "scale": 1.1944,
+      "opacity": 0.9944,
+      "emoji": "😊"
+    }
+  },
+  {
+    "frame": 10,
+    "t": 1.0,
+    "filename": "frame_010_t1.00.png",
+    "description": "中性→开心",
+    "params": {
+      "background_color": [
+        144,
+        238,
+        144
+      ],
+      "text_color": [
+        0,
+        100,
+        0
+      ],
+      "scale": 1.2,
+      "opacity": 1.0,
+      "emoji": "😊"
+    }
+  }
+]

@@ -1,0 +1,233 @@
+[
+  {
+    "frame": 0,
+    "t": 0.0,
+    "filename": "frame_000_t0.00.png",
+    "description": "警示→担忧",
+    "params": {
+      "background_color": [
+        255,
+        99,
+        71
+      ],
+      "text_color": [
+        139,
+        0,
+        0
+      ],
+      "scale": 1.1,
+      "opacity": 1.0,
+      "emoji": "⚠️"
+    }
+  },
+  {
+    "frame": 1,
+    "t": 0.1,
+    "filename": "frame_001_t0.10.png",
+    "description": "警示→担忧",
+    "params": {
+      "background_color": [
+        255,
+        100,
+        69
+      ],
+      "text_color": [
+        139,
+        1,
+        0
+      ],
+      "scale": 1.0944,
+      "opacity": 0.9944,
+      "emoji": "⚠️"
+    }
+  },
+  {
+    "frame": 2,
+    "t": 0.2,
+    "filename": "frame_002_t0.20.png",
+    "description": "警示→担忧",
+    "params": {
+      "background_color": [
+        255,
+        105,
+        63
+      ],
+      "text_color": [
+        139,
+        7,
+        1
+      ],
+      "scale": 1.0792000000000002,
+      "opacity": 0.9792,
+      "emoji": "⚠️"
+    }
+  },
+  {
+    "frame": 3,
+    "t": 0.3,
+    "filename": "frame_003_t0.30.png",
+    "description": "警示→担忧",
+    "params": {
+      "background_color": [
+        255,
+        113,
+        55
+      ],
+      "text_color": [
+        139,
+        14,
+        4
+      ],
+      "scale": 1.0568,
+      "opacity": 0.9568,
+      "emoji": "⚠️"
+    }
+  },
+  {
+    "frame": 4,
+    "t": 0.4,
+    "filename": "frame_004_t0.40.png",
+    "description": "警示→担忧",
+    "params": {
+      "background_color": [
+        255,
+        122,
+        46
+      ],
+      "text_color": [
+        139,
+        24,
+        6
+      ],
+      "scale": 1.0296,
+      "opacity": 0.9296,
+      "emoji": "⚠️"
+    }
+  },
+  {
+    "frame": 5,
+    "t": 0.5,
+    "filename": "frame_005_t0.50.png",
+    "description": "警示→担忧",
+    "params": {
+      "background_color": [
+        255,
+        132,
+        35
+      ],
+      "text_color": [
+        139,
+        34,
+        9
+      ],
+      "scale": 1.0,
+      "opacity": 0.9,
+      "emoji": "😟"
+    }
+  },
+  {
+    "frame": 6,
+    "t": 0.6,
+    "filename": "frame_006_t0.60.png",
+    "description": "警示→担忧",
+    "params": {
+      "background_color": [
+        255,
+        141,
+        24
+      ],
+      "text_color": [
+        139,
+        44,
+        12
+      ],
+      "scale": 0.9704,
+      "opacity": 0.8704000000000001,
+      "emoji": "😟"
+    }
+  },
+  {
+    "frame": 7,
+    "t": 0.7,
+    "filename": "frame_007_t0.70.png",
+    "description": "警示→担忧",
+    "params": {
+      "background_color": [
+        255,
+        150,
+        15
+      ],
+      "text_color": [
+        139,
+        54,
+        14
+      ],
+      "scale": 0.9432,
+      "opacity": 0.8432000000000001,
+      "emoji": "😟"
+    }
+  },
+  {
+    "frame": 8,
+    "t": 0.8,
+    "filename": "frame_008_t0.80.png",
+    "description": "警示→担忧",
+    "params": {
+      "background_color": [
+        255,
+        158,
+        7
+      ],
+      "text_color": [
+        139,
+        61,
+        17
+      ],
+      "scale": 0.9208000000000001,
+      "opacity": 0.8208,
+      "emoji": "😟"
+    }
+  },
+  {
+    "frame": 9,
+    "t": 0.9,
+    "filename": "frame_009_t0.90.png",
+    "description": "警示→担忧",
+    "params": {
+      "background_color": [
+        255,
+        163,
+        1
+      ],
+      "text_color": [
+        139,
+        67,
+        18
+      ],
+      "scale": 0.9056,
+      "opacity": 0.8056000000000001,
+      "emoji": "😟"
+    }
+  },
+  {
+    "frame": 10,
+    "t": 1.0,
+    "filename": "frame_010_t1.00.png",
+    "description": "警示→担忧",
+    "params": {
+      "background_color": [
+        255,
+        165,
+        0
+      ],
+      "text_color": [
+        139,
+        69,
+        19
+      ],
+      "scale": 0.9,
+      "opacity": 0.8,
+      "emoji": "😟"
+    }
+  }
+]

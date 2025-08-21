@@ -1,0 +1,233 @@
+[
+  {
+    "frame": 0,
+    "t": 0.0,
+    "filename": "frame_000_t0.00.png",
+    "description": "关怀→中性",
+    "params": {
+      "background_color": [
+        255,
+        182,
+        193
+      ],
+      "text_color": [
+        139,
+        69,
+        19
+      ],
+      "scale": 1.1,
+      "opacity": 0.9,
+      "emoji": "🤗"
+    }
+  },
+  {
+    "frame": 1,
+    "t": 0.1,
+    "filename": "frame_001_t0.10.png",
+    "description": "关怀→中性",
+    "params": {
+      "background_color": [
+        253,
+        182,
+        193
+      ],
+      "text_color": [
+        138,
+        70,
+        21
+      ],
+      "scale": 1.0972000000000002,
+      "opacity": 0.8972,
+      "emoji": "🤗"
+    }
+  },
+  {
+    "frame": 2,
+    "t": 0.2,
+    "filename": "frame_002_t0.20.png",
+    "description": "关怀→中性",
+    "params": {
+      "background_color": [
+        250,
+        185,
+        194
+      ],
+      "text_color": [
+        135,
+        72,
+        27
+      ],
+      "scale": 1.0896000000000001,
+      "opacity": 0.8896000000000001,
+      "emoji": "🤗"
+    }
+  },
+  {
+    "frame": 3,
+    "t": 0.3,
+    "filename": "frame_003_t0.30.png",
+    "description": "关怀→中性",
+    "params": {
+      "background_color": [
+        245,
+        188,
+        196
+      ],
+      "text_color": [
+        131,
+        76,
+        37
+      ],
+      "scale": 1.0784,
+      "opacity": 0.8784000000000001,
+      "emoji": "🤗"
+    }
+  },
+  {
+    "frame": 4,
+    "t": 0.4,
+    "filename": "frame_004_t0.40.png",
+    "description": "关怀→中性",
+    "params": {
+      "background_color": [
+        239,
+        192,
+        199
+      ],
+      "text_color": [
+        127,
+        81,
+        49
+      ],
+      "scale": 1.0648,
+      "opacity": 0.8648,
+      "emoji": "🤗"
+    }
+  },
+  {
+    "frame": 5,
+    "t": 0.5,
+    "filename": "frame_005_t0.50.png",
+    "description": "关怀→中性",
+    "params": {
+      "background_color": [
+        233,
+        196,
+        202
+      ],
+      "text_color": [
+        122,
+        87,
+        62
+      ],
+      "scale": 1.05,
+      "opacity": 0.8500000000000001,
+      "emoji": "😐"
+    }
+  },
+  {
+    "frame": 6,
+    "t": 0.6,
+    "filename": "frame_006_t0.60.png",
+    "description": "关怀→中性",
+    "params": {
+      "background_color": [
+        226,
+        200,
+        204
+      ],
+      "text_color": [
+        116,
+        92,
+        74
+      ],
+      "scale": 1.0352000000000001,
+      "opacity": 0.8352,
+      "emoji": "😐"
+    }
+  },
+  {
+    "frame": 7,
+    "t": 0.7,
+    "filename": "frame_007_t0.70.png",
+    "description": "关怀→中性",
+    "params": {
+      "background_color": [
+        220,
+        204,
+        207
+      ],
+      "text_color": [
+        112,
+        97,
+        86
+      ],
+      "scale": 1.0216,
+      "opacity": 0.8216000000000001,
+      "emoji": "😐"
+    }
+  },
+  {
+    "frame": 8,
+    "t": 0.8,
+    "filename": "frame_008_t0.80.png",
+    "description": "关怀→中性",
+    "params": {
+      "background_color": [
+        215,
+        207,
+        209
+      ],
+      "text_color": [
+        108,
+        101,
+        96
+      ],
+      "scale": 1.0104,
+      "opacity": 0.8104,
+      "emoji": "😐"
+    }
+  },
+  {
+    "frame": 9,
+    "t": 0.9,
+    "filename": "frame_009_t0.90.png",
+    "description": "关怀→中性",
+    "params": {
+      "background_color": [
+        212,
+        210,
+        210
+      ],
+      "text_color": [
+        105,
+        103,
+        102
+      ],
+      "scale": 1.0028,
+      "opacity": 0.8028000000000001,
+      "emoji": "😐"
+    }
+  },
+  {
+    "frame": 10,
+    "t": 1.0,
+    "filename": "frame_010_t1.00.png",
+    "description": "关怀→中性",
+    "params": {
+      "background_color": [
+        211,
+        211,
+        211
+      ],
+      "text_color": [
+        105,
+        105,
+        105
+      ],
+      "scale": 1.0,
+      "opacity": 0.8,
+      "emoji": "😐"
+    }
+  }
+]

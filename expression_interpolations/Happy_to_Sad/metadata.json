@@ -1,0 +1,233 @@
+[
+  {
+    "frame": 0,
+    "t": 0.0,
+    "filename": "frame_000_t0.00.png",
+    "description": "开心→悲伤",
+    "params": {
+      "background_color": [
+        144,
+        238,
+        144
+      ],
+      "text_color": [
+        0,
+        100,
+        0
+      ],
+      "scale": 1.2,
+      "opacity": 1.0,
+      "emoji": "😊"
+    }
+  },
+  {
+    "frame": 1,
+    "t": 0.1,
+    "filename": "frame_001_t0.10.png",
+    "description": "开心→悲伤",
+    "params": {
+      "background_color": [
+        144,
+        236,
+        144
+      ],
+      "text_color": [
+        2,
+        100,
+        2
+      ],
+      "scale": 1.1887999999999999,
+      "opacity": 0.9916,
+      "emoji": "😊"
+    }
+  },
+  {
+    "frame": 2,
+    "t": 0.2,
+    "filename": "frame_002_t0.20.png",
+    "description": "开心→悲伤",
+    "params": {
+      "background_color": [
+        146,
+        230,
+        146
+      ],
+      "text_color": [
+        10,
+        100,
+        10
+      ],
+      "scale": 1.1583999999999999,
+      "opacity": 0.9688,
+      "emoji": "😊"
+    }
+  },
+  {
+    "frame": 3,
+    "t": 0.3,
+    "filename": "frame_003_t0.30.png",
+    "description": "开心→悲伤",
+    "params": {
+      "background_color": [
+        149,
+        223,
+        149
+      ],
+      "text_color": [
+        22,
+        101,
+        22
+      ],
+      "scale": 1.1136,
+      "opacity": 0.9352,
+      "emoji": "😊"
+    }
+  },
+  {
+    "frame": 4,
+    "t": 0.4,
+    "filename": "frame_004_t0.40.png",
+    "description": "开心→悲伤",
+    "params": {
+      "background_color": [
+        152,
+        213,
+        152
+      ],
+      "text_color": [
+        36,
+        101,
+        36
+      ],
+      "scale": 1.0592,
+      "opacity": 0.8944,
+      "emoji": "😊"
+    }
+  },
+  {
+    "frame": 5,
+    "t": 0.5,
+    "filename": "frame_005_t0.50.png",
+    "description": "开心→悲伤",
+    "params": {
+      "background_color": [
+        156,
+        203,
+        156
+      ],
+      "text_color": [
+        52,
+        102,
+        52
+      ],
+      "scale": 1.0,
+      "opacity": 0.85,
+      "emoji": "😢"
+    }
+  },
+  {
+    "frame": 6,
+    "t": 0.6,
+    "filename": "frame_006_t0.60.png",
+    "description": "开心→悲伤",
+    "params": {
+      "background_color": [
+        160,
+        193,
+        160
+      ],
+      "text_color": [
+        68,
+        103,
+        68
+      ],
+      "scale": 0.9408000000000001,
+      "opacity": 0.8056,
+      "emoji": "😢"
+    }
+  },
+  {
+    "frame": 7,
+    "t": 0.7,
+    "filename": "frame_007_t0.70.png",
+    "description": "开心→悲伤",
+    "params": {
+      "background_color": [
+        163,
+        183,
+        163
+      ],
+      "text_color": [
+        82,
+        103,
+        82
+      ],
+      "scale": 0.8864000000000001,
+      "opacity": 0.7647999999999999,
+      "emoji": "😢"
+    }
+  },
+  {
+    "frame": 8,
+    "t": 0.8,
+    "filename": "frame_008_t0.80.png",
+    "description": "开心→悲伤",
+    "params": {
+      "background_color": [
+        166,
+        176,
+        166
+      ],
+      "text_color": [
+        94,
+        104,
+        94
+      ],
+      "scale": 0.8415999999999999,
+      "opacity": 0.7311999999999999,
+      "emoji": "😢"
+    }
+  },
+  {
+    "frame": 9,
+    "t": 0.9,
+    "filename": "frame_009_t0.90.png",
+    "description": "开心→悲伤",
+    "params": {
+      "background_color": [
+        168,
+        170,
+        168
+      ],
+      "text_color": [
+        102,
+        104,
+        102
+      ],
+      "scale": 0.8112,
+      "opacity": 0.7083999999999999,
+      "emoji": "😢"
+    }
+  },
+  {
+    "frame": 10,
+    "t": 1.0,
+    "filename": "frame_010_t1.00.png",
+    "description": "开心→悲伤",
+    "params": {
+      "background_color": [
+        169,
+        169,
+        169
+      ],
+      "text_color": [
+        105,
+        105,
+        105
+      ],
+      "scale": 0.8,
+      "opacity": 0.7,
+      "emoji": "😢"
+    }
+  }
+]
