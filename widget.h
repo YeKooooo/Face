@@ -20,6 +20,12 @@
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QNetworkInterface>
+// 新增：HTTP 流式接入
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QUrl>
+// 新增：LLM显示采用QPlainTextEdit以支持滚动条
+#include <QPlainTextEdit>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class Widget; }
@@ -83,16 +89,35 @@ public Q_SLOTS:
     void processEmotionOutput(const QString& jsonString);
     void processEmotionOutput(const EmotionOutput& emotionData);
     
+    // LLM/ASR 流式HTTP启动（与NerController匹配）
+    void startNerStreamJson(const QUrl& baseUrl, const QString& memoryId, const QString& text);
+    void startNerStreamMultipart(const QUrl& baseUrl, const QString& memoryId, const QString& imagePath);
+
+Q_SIGNALS:
+    // 流式文本信号：在UI线程内消费
+    void llmTokens(const QString& text, bool isFinal);
+    void asrText(const QString& text, bool isFinal);
+    
 private Q_SLOTS:
     void switchToExpression();
     void onAnimationFinished();
-    void onInterpolationSliderChanged(int value);
-    void onFromExpressionChanged(int index);
-    void onToExpressionChanged(int index);
-    void playInterpolationAnimation();
+    // 删除未用插值相关槽
+    // void onInterpolationSliderChanged(int value);
+    // void onFromExpressionChanged(int index);
+    // void onToExpressionChanged(int index);
+    // void playInterpolationAnimation();
+    // 删除未用的手动播放按钮槽
     void playImageSequenceAnimation();
     void onImageAnimationStep();
     void onExpressionDurationTimeout();
+
+    // LLM/ASR 显示槽
+    void onLlmTokens(const QString& text, bool isFinal);
+    void onTypingTick();
+    void onNerReadyRead();
+    void onNerFinished();
+    void onNerError(QNetworkReply::NetworkError code);
+    void updateAsrText(const QString& text, bool isFinal);
 
 private:
     void setupFaceDisplay();
@@ -100,12 +125,13 @@ private:
     void animateToExpression(ExpressionType type);
     void initializeExpressions();
     void cleanupAnimations();
-    void setupInterpolationUI();
+    // 删除未用插值UI/算法声明
+    // void setupInterpolationUI();
     void initializeExpressionParams();
-    ExpressionParams interpolateExpressions(const ExpressionParams& from, 
-                                          const ExpressionParams& to, 
-                                          double t);
-    void applyExpressionParams(const ExpressionParams& params);
+    // ExpressionParams interpolateExpressions(const ExpressionParams& from, 
+    //                                       const ExpressionParams& to, 
+    //                                       double t);
+    // void applyExpressionParams(const ExpressionParams& params);
     
     // 图像序列相关函数
     void loadImageSequences();
@@ -116,6 +142,9 @@ private:
     void switchToExpressionWithImages(ExpressionType targetType);
     EmotionOutput parseEmotionOutputJson(const QString& jsonString);
     void logEmotionTrigger(const QString& reason, ExpressionType type);
+
+    // 更新LLM文本显示（仅保留1-2行可见，超出出现滚动条并自动滚动）
+    void updateLlmDisplay();
     
     Ui::Widget *ui;
     
@@ -134,19 +163,20 @@ private:
     ExpressionType currentExpression;
     bool isAnimating;
     
-    // 插值控件
-    QComboBox* fromExpressionCombo;
-    QComboBox* toExpressionCombo;
-    QSlider* interpolationSlider;
-    QPushButton* playAnimationButton;
-    QSpinBox* animationSpeedSpinBox;
+    // 移除未用插值控件
+    // QComboBox* fromExpressionCombo;
+    // QComboBox* toExpressionCombo;
+    // QSlider* interpolationSlider;
+    // QPushButton* playAnimationButton;
+    // QSpinBox* animationSpeedSpinBox;
     
-    // 插值状态
+    // 插值状态（保留起止表情用于序列命名）
     ExpressionType fromExpression;
     ExpressionType toExpression;
-    QTimer* interpolationTimer;
-    int interpolationStep;
-    int maxInterpolationSteps;
+    // 移除未用插值定时器与步进
+    // QTimer* interpolationTimer;
+    // int interpolationStep;
+    // int maxInterpolationSteps;
     
     // 图像序列相关成员变量
     QMap<QString, QList<QPixmap>> imageSequenceCache;
@@ -155,7 +185,8 @@ private:
     int currentImageFrame;
     QString interpolationBasePath;
     bool useImageSequences; // 优先采用图像序列模式
-    QPushButton* toggleModeButton;
+    // QPushButton* toggleModeButton; // 已移除
+    int imageAnimationIntervalMs; // 新增：图像序列播放间隔(ms)
     
     // EmotionOutput相关成员
     QTimer* expressionDurationTimer;
@@ -168,13 +199,25 @@ private:
     quint16 serverPort;
     bool isServerRunning;
     
-    // Socket服务器UI控件
-    QPushButton* startServerButton;
-    QPushButton* stopServerButton;
-    QLabel* serverStatusLabel;
-    QLabel* clientCountLabel;
-    QSpinBox* portSpinBox;
-    QLabel* ipAddressLabel;
+    // 移除Socket服务器UI控件
+    // QPushButton* startServerButton = nullptr;
+    // QPushButton* stopServerButton = nullptr;
+    // QLabel* serverStatusLabel = nullptr;
+    // QLabel* clientCountLabel = nullptr;
+    // QSpinBox* portSpinBox = nullptr;
+    // QLabel* ipAddressLabel = nullptr;
+    
+    // LLM/ASR 文本显示与HTTP接入成员
+    QLabel* asrLabel;
+    QPlainTextEdit* llmEdit; // 替换为可滚动文本框
+    QNetworkAccessManager* nerNam;
+    QNetworkReply* nerReply;
+    QByteArray nerBuffer;
+    QTimer* llmTypingTimer;
+    QString llmPending;
+    QString llmDisplayed;
+    bool llmStreamFinished;
+    int llmCharsPerTick;
     
 private Q_SLOTS:
     // Socket相关槽函数
@@ -190,14 +233,15 @@ private:
     void stopSocketServer();
     void processSocketData(const QByteArray& data);
     QString getLocalIPAddress();
-    void setupSocketServerUI();
-    void updateServerStatus();
-    void updateClientCount();
+    // 移除Socket UI相关私有函数
+    // void setupSocketServerUI();
+    // void updateServerStatus();
+    // void updateClientCount();
     
 private Q_SLOTS:
-    // Socket UI相关槽函数
-    void onStartServerClicked();
-    void onStopServerClicked();
-    void onPortChanged(int port);
+    // 移除Socket UI相关槽函数
+    // void onStartServerClicked();
+    // void onStopServerClicked();
+    // void onPortChanged(int port);
 };
 #endif // WIDGET_H

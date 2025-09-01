@@ -74,7 +74,45 @@ class EmotionOutputClient:
         except Exception as e:
             print(f"❌ 发送失败: {e}")
             return False
-    
+
+    def send_asr(self, text: str, is_final: bool = True) -> bool:
+        """发送ASR识别结果到Qt端（type=asr）"""
+        if not self.connected:
+            print("❌ 未连接到服务器")
+            return False
+        payload = {"type": "asr", "text": text, "isFinal": bool(is_final)}
+        try:
+            json_str = json.dumps(payload, ensure_ascii=False)
+            self.socket.send((json_str + "\n").encode('utf-8'))
+            print(f"🎙️ 发送ASR: {json_str}")
+            return True
+        except Exception as e:
+            print(f"❌ 发送ASR失败: {e}")
+            return False
+
+    def send_llm_stream(self, full_text: str, tokens_per_chunk: int = 3, interval_ms: int = 40) -> bool:
+        """模拟LLM逐字流发送（type=llm_stream）"""
+        if not self.connected:
+            print("❌ 未连接到服务器")
+            return False
+        try:
+            i = 0
+            while i < len(full_text):
+                chunk = full_text[i:i+tokens_per_chunk]
+                msg = {"type": "llm_stream", "text": chunk, "isFinal": False}
+                self.socket.send((json.dumps(msg, ensure_ascii=False) + "\n").encode("utf-8"))
+                print(f"🧠 LLM分片: {chunk}")
+                i += tokens_per_chunk
+                time.sleep(interval_ms / 1000.0)
+            # 发送完成标记
+            final_msg = {"type": "llm_stream", "text": "", "isFinal": True}
+            self.socket.send((json.dumps(final_msg, ensure_ascii=False) + "\n").encode("utf-8"))
+            print("✅ 发送LLM完成标记")
+            return True
+        except Exception as e:
+            print(f"❌ 发送LLM失败: {e}")
+            return False
+
     def run_interactive_test(self):
         """运行交互式测试"""
         print("\n🎭 交互式表情测试模式")
@@ -94,6 +132,9 @@ class EmotionOutputClient:
         
         print("\n输入命令:")
         print("  数字1-7: 发送对应表情")
+        print("  'asr': 发送一条ASR文本")
+        print("  'llm': 模拟LLM流式回复")
+        print("  'mix': 混合场景（ASR->LLM->表情）")
         print("  'auto': 运行自动测试")
         print("  'quit': 退出程序")
         
@@ -105,6 +146,12 @@ class EmotionOutputClient:
                     break
                 elif cmd == 'auto':
                     self.run_auto_test()
+                elif cmd == 'asr':
+                    self.run_asr_demo()
+                elif cmd == 'llm':
+                    self.run_llm_demo()
+                elif cmd == 'mix':
+                    self.run_mixed_demo()
                 elif cmd.isdigit() and 1 <= int(cmd) <= 7:
                     idx = int(cmd) - 1
                     expr_type, expr_name, emoji = expressions[idx]
@@ -121,7 +168,7 @@ class EmotionOutputClient:
                 break
             except Exception as e:
                 print(f"❌ 输入错误: {e}")
-    
+
     def run_auto_test(self):
         """运行自动测试序列"""
         print("\n🤖 自动测试模式启动")
@@ -145,7 +192,7 @@ class EmotionOutputClient:
             time.sleep(wait_time)
         
         print("\n✅ 自动测试完成")
-    
+
     def run_stress_test(self, count: int = 10):
         """运行压力测试"""
         print(f"\n⚡ 压力测试模式 - 发送 {count} 条消息")
@@ -162,6 +209,43 @@ class EmotionOutputClient:
             time.sleep(0.5)  # 短间隔
         
         print("\n✅ 压力测试完成")
+
+    def run_asr_demo(self):
+        """交互式：发送一条ASR识别文本"""
+        print("\n🎙️ ASR 文本模拟")
+        text = input("ASR文本(默认: 请提醒我按时吃药): ").strip() or "请提醒我按时吃药"
+        final_str = input("是否final(true/false, 默认true): ").strip().lower() or "true"
+        is_final = final_str in ("1", "true", "t", "y", "yes")
+        self.send_asr(text, is_final)
+
+    def run_llm_demo(self):
+        """交互式：模拟LLM逐字流式输出"""
+        print("\n🧠 LLM 流式输出模拟")
+        answer = input("LLM回复文本(默认: 好的，我会按时提醒您按医嘱用药。): ").strip() or "好的，我会按时提醒您按医嘱用药。"
+        tpc_str = input("每片字符数(默认3): ").strip() or "3"
+        itv_str = input("分片间隔毫秒(默认40): ").strip() or "40"
+        try:
+            tpc = int(tpc_str)
+        except ValueError:
+            tpc = 3
+        try:
+            itv = int(itv_str)
+        except ValueError:
+            itv = 40
+        self.send_llm_stream(answer, tokens_per_chunk=tpc, interval_ms=itv)
+
+    def run_mixed_demo(self):
+        """一键混合场景：ASR -> Caring -> LLM -> Happy"""
+        print("\n🔀 混合场景：ASR -> 表情Caring -> LLM流 -> 表情Happy")
+        self.send_asr("请问我今天的降压药什么时候吃？", True)
+        time.sleep(0.2)
+        self.send_emotion_output("caring", 3000, "用户询问用药时间")
+        time.sleep(0.5)
+        answer = "建议在早餐后30分钟服用，并配合温水。若出现不适，请及时就医。"
+        self.send_llm_stream(answer, tokens_per_chunk=3, interval_ms=40)
+        time.sleep(0.2)
+        self.send_emotion_output("happy", 2000, "已给出建议")
+        print("✅ 混合场景完成")
 
 def main():
     """主函数"""
@@ -194,8 +278,10 @@ def main():
         print("  1. 交互式测试 (手动控制)")
         print("  2. 自动测试 (预设序列)")
         print("  3. 压力测试 (批量发送)")
+        print("  4. ASR/LLM 模拟 (流式+ASR)")
+        print("  5. 混合场景 (ASR->LLM->表情)")
         
-        mode = input("\n请选择模式 (1-3, 默认1): ").strip() or "1"
+        mode = input("\n请选择模式 (1-5, 默认1): ").strip() or "1"
         
         if mode == "1":
             client.run_interactive_test()
@@ -205,6 +291,11 @@ def main():
             count_str = input("压力测试消息数量 (默认10): ").strip() or "10"
             count = int(count_str) if count_str.isdigit() else 10
             client.run_stress_test(count)
+        elif mode == "4":
+            client.run_asr_demo()
+            client.run_llm_demo()
+        elif mode == "5":
+            client.run_mixed_demo()
         else:
             print("❌ 无效模式，使用交互式测试")
             client.run_interactive_test()

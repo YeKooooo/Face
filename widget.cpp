@@ -13,6 +13,13 @@
 #include <QJsonDocument>
 #include <QJsonParseError>
 #include <QCoreApplication>
+// 新增：HTTP流式与多部分上传所需头文件
+#include <QNetworkRequest>
+#include <QHttpMultiPart>
+#include <QFile>
+#include <QUrlQuery>
+#include <QHostAddress>
+#include <QScrollBar>
 
 Widget::Widget(QWidget *parent)
     : QWidget(parent)
@@ -21,9 +28,7 @@ Widget::Widget(QWidget *parent)
     , isAnimating(false)
     , fromExpression(ExpressionType::Happy)
     , toExpression(ExpressionType::Sad)
-    , interpolationTimer(new QTimer(this))
-    , interpolationStep(0)
-    , maxInterpolationSteps(50)
+
     , imageAnimationTimer(new QTimer(this))
     , currentImageFrame(0)
     , interpolationBasePath("expression_interpolations")
@@ -33,6 +38,7 @@ Widget::Widget(QWidget *parent)
     , tcpServer(nullptr)
     , serverPort(8888)
     , isServerRunning(false)
+    , imageAnimationIntervalMs(50)
 {
     ui->setupUi(this);
     setWindowTitle("智能用药提醒机器人表情系统 - 插值版");
@@ -54,8 +60,8 @@ Widget::Widget(QWidget *parent)
     initializeExpressions();
     initializeExpressionParams();
     setupFaceDisplay();
-    setupInterpolationUI();
-    setupSocketServerUI();
+    // setupInterpolationUI(); // 按用户要求隐藏插值控制区域
+    // setupSocketServerUI();  // 按用户要求隐藏Socket服务器控制区域
     createAnimations();
     
     // 初始化图像序列功能
@@ -68,32 +74,40 @@ Widget::Widget(QWidget *parent)
     connect(expressionDurationTimer, &QTimer::timeout, this, &Widget::onExpressionDurationTimeout);
     expressionDurationTimer->setSingleShot(true);
     
+    // 程序启动时默认显示高兴表情
+    if (useImageSequences) {
+        switchToExpressionWithImages(ExpressionType::Happy);
+    } else {
+        animateToExpression(ExpressionType::Happy);
+    }
+    
     // 初始化Socket服务器
     initializeSocketServer();
     
-    // 连接插值定时器
-    connect(interpolationTimer, &QTimer::timeout, this, [this]() {
-        double t = static_cast<double>(interpolationStep) / maxInterpolationSteps;
-        ExpressionParams params = interpolateExpressions(
-            expressionParams[fromExpression], 
-            expressionParams[toExpression], 
-            t
-        );
-        applyExpressionParams(params);
-        
-        interpolationStep++;
-        if (interpolationStep > maxInterpolationSteps) {
-            interpolationTimer->stop();
-            interpolationStep = 0;
-        }
-    });
+    // ========== 新增：HTTP流式接入初始化 ==========
+    nerNam = new QNetworkAccessManager(this);
+    nerReply = nullptr;
+    llmTypingTimer = new QTimer(this);
+    llmTypingTimer->setInterval(30); // 20–40ms 之间
+    llmCharsPerTick = 3;
+    llmStreamFinished = false;
+    connect(this, &Widget::llmTokens, this, &Widget::onLlmTokens);
+    connect(this, &Widget::asrText, this, &Widget::updateAsrText);
+    connect(llmTypingTimer, &QTimer::timeout, this, &Widget::onTypingTick);
 }
 
 Widget::~Widget()
 {
     cleanupAnimations();
-    if (interpolationTimer) {
-        interpolationTimer->stop();
+    // 新增：HTTP流式资源清理
+    if (llmTypingTimer) {
+        llmTypingTimer->stop();
+    }
+    if (nerReply) {
+        disconnect(nerReply, nullptr, this, nullptr);
+        nerReply->abort();
+        nerReply->deleteLater();
+        nerReply = nullptr;
     }
     delete ui;
 }
@@ -145,6 +159,7 @@ void Widget::initializeExpressionParams()
     );
 }
 
+#if 0 // disable interpolation UI block
 void Widget::setupInterpolationUI()
 {
     // 创建插值控制面板
@@ -364,84 +379,44 @@ void Widget::playInterpolationAnimation()
     interpolationTimer->start();
     playAnimationButton->setText("停止动画");
 }
-
+#endif // disable interpolation UI block
 void Widget::setupFaceDisplay()
 {
     // 创建主布局
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
-    
-    // 创建表情显示标签（不使用emoji初始显示）
+
+    // 表情显示区域
     faceLabel = new QLabel("", this);
     faceLabel->setAlignment(Qt::AlignCenter);
-    QFont font = faceLabel->font();
-    font.setPointSize(80);
-    faceLabel->setFont(font);
-    faceLabel->setStyleSheet("QLabel { color: #333; background-color: #f0f0f0; border-radius: 15px; padding: 30px; }");
-    
-    // 创建按钮网格布局
-    QGridLayout *buttonLayout = new QGridLayout();
-    
-    // 创建所有表情按钮
-    QList<ExpressionType> expressionOrder = {
-        ExpressionType::Happy, ExpressionType::Caring, ExpressionType::Encouraging,
-        ExpressionType::Neutral, ExpressionType::Concerned, ExpressionType::Alert, ExpressionType::Sad
-    };
-    
-    int row = 0, col = 0;
-    for (ExpressionType type : expressionOrder) {
-        ExpressionData data = expressions[type];
-        // 按要求不展示emoji，仅展示名称
-        QPushButton *button = new QPushButton(QString("%1").arg(data.name), this);
-        
-        // 设置按钮样式
-        QString buttonStyle = QString(
-            "QPushButton { "
-            "font-size: 14px; "
-            "padding: 8px 12px; "
-            "background-color: %1; "
-            "color: white; "
-            "border: none; "
-            "border-radius: 8px; "
-            "min-width: 120px; "
-            "} "
-            "QPushButton:hover { "
-            "background-color: %2; "
-            "transform: scale(1.05); "
-            "} "
-            "QPushButton:pressed { "
-            "background-color: %3; "
-            "}"
-        ).arg(data.color, 
-              QString(data.color).replace("#", "#CC"), // 悬停时稍微透明
-              QString(data.color).replace("#", "#AA")); // 按下时更透明
-        
-        button->setStyleSheet(buttonStyle);
-        button->setToolTip(data.description);
-        
-        // 存储按钮引用
-        expressionButtons[type] = button;
-        
-        // 连接信号槽
-        connect(button, &QPushButton::clicked, this, &Widget::switchToExpression);
-        
-        // 添加到网格布局
-        buttonLayout->addWidget(button, row, col);
-        col++;
-        if (col >= 3) {
-            col = 0;
-            row++;
-        }
+    faceLabel->setStyleSheet("QLabel { background-color: #f0f0f0; border-radius: 10px; font-size: 120px; padding: 20px; }");
+
+    // ========== ASR/LLM 显示区域 ==========
+    QGroupBox* streamGroup = new QGroupBox("语音识别与LLM流式输出", this);
+    QVBoxLayout* streamLayout = new QVBoxLayout(streamGroup);
+    asrLabel = new QLabel("ASR: ", this);
+    // 可滚动的QPlainTextEdit，限制两行可视高度
+    llmEdit = new QPlainTextEdit(this);
+    llmEdit->setReadOnly(true);
+    llmEdit->setLineWrapMode(QPlainTextEdit::WidgetWidth);
+    llmEdit->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    {
+        QFontMetrics fm(llmEdit->font());
+        const int lineH = fm.lineSpacing();
+        const int frame = llmEdit->frameWidth();
+        const int padding = 8; // 与样式匹配的内边距
+        llmEdit->setFixedHeight(lineH * 2 + frame * 2 + padding);
     }
-    
-    // 添加说明标签
-    QLabel *infoLabel = new QLabel("点击按钮切换机器人表情，每种表情适用于不同的用药提醒场景", this);
-    infoLabel->setAlignment(Qt::AlignCenter);
-    infoLabel->setStyleSheet("QLabel { color: #666; font-size: 12px; margin: 10px; }");
-    
+    asrLabel->setWordWrap(true);
+    asrLabel->setStyleSheet("QLabel { background:#fafafa; border:1px solid #ddd; border-radius:6px; padding:6px; font-size:12px; }");
+    llmEdit->setStyleSheet("QPlainTextEdit { background:#f7fbff; border:1px solid #cfe8ff; border-radius:6px; padding:6px; font-size:12px; }");
+    streamLayout->addWidget(asrLabel);
+    streamLayout->addWidget(llmEdit);
+
+    // 组装布局：去掉手动按钮与说明，仅保留表情显示与流式区域
     mainLayout->addWidget(faceLabel, 2);
-    mainLayout->addLayout(buttonLayout);
-    mainLayout->addWidget(infoLabel);
-    
+    mainLayout->addWidget(streamGroup);
+    mainLayout->addStretch(1);
+
     setLayout(mainLayout);
 }
 
@@ -723,21 +698,19 @@ void Widget::switchToExpressionWithImages(ExpressionType targetType)
     isAnimating = true;
     currentImageFrame = 0;
     
-    // 停止其他动画
-    if (interpolationTimer->isActive()) {
-        interpolationTimer->stop();
-    }
+    // 停止其他动画（仅停止已有的表达式动画组）
     if (expressionAnimation && expressionAnimation->state() == QAbstractAnimation::Running) {
         expressionAnimation->stop();
     }
     
-    // 开始图像序列动画，使用速度框设置的间隔
-    int interval = animationSpeedSpinBox ? animationSpeedSpinBox->value() : 50;
+    // 开始图像序列动画，使用内部配置的间隔
+    int interval = imageAnimationIntervalMs;
     imageAnimationTimer->start(interval);
     
-    qDebug() << QString("开始播放图像序列: %1 (%2 帧)")
+    qDebug() << QString("开始播放图像序列: %1 (%2 帧), 间隔: %3ms")
         .arg(sequenceName)
-        .arg(imageSequenceCache[sequenceName].size());
+        .arg(imageSequenceCache[sequenceName].size())
+        .arg(interval);
 }
 
 void Widget::onImageAnimationStep()
@@ -773,7 +746,7 @@ void Widget::onImageAnimationStep()
         
         // 更新当前表情状态为目标表情
         currentExpression = toExpression;
-        playAnimationButton->setText("播放图像动画");
+        // playAnimationButton->setText("播放图像动画"); // 移除UI按钮依赖
         
         qDebug() << "图像序列动画完成，当前表情:" << expressionTypeToString(currentExpression);
     }
@@ -781,24 +754,19 @@ void Widget::onImageAnimationStep()
 
 void Widget::playImageSequenceAnimation()
 {
-    if (!useImageSequences) {
-        // 回退到参数插值动画
-        playInterpolationAnimation();
-        return;
-    }
-    
+    // 始终使用图像序列模式，不再回退插值
     if (imageAnimationTimer->isActive()) {
         imageAnimationTimer->stop();
         isAnimating = false;
-        playAnimationButton->setText("播放图像动画");
+        // playAnimationButton->setText("播放图像动画"); // 移除UI按钮依赖
         return;
     }
     
     // 设置播放间隔
-    imageAnimationTimer->setInterval(animationSpeedSpinBox->value());
+    imageAnimationTimer->setInterval(imageAnimationIntervalMs);
     // 按当前起始/目标表情播放
     switchToExpressionWithImages(toExpression);
-    playAnimationButton->setText("停止动画");
+    // playAnimationButton->setText("停止动画"); // 移除UI按钮依赖
 }
 
 // EmotionOutput接口实现
@@ -890,7 +858,7 @@ ExpressionType Widget::stringToExpressionType(const QString& typeString)
         return ExpressionType::Encouraging;
     } else if (lowerType == "alert" || lowerType == "警觉") {
         return ExpressionType::Alert;
-    } else if (lowerType == "sad" || lowerType == "难过") {
+    } else if (lowerType == "sad" || lowerType == "悲伤") {
         return ExpressionType::Sad;
     } else if (lowerType == "neutral" || lowerType == "中性") {
         return ExpressionType::Neutral;
@@ -995,8 +963,8 @@ void Widget::onNewConnection()
         qDebug() << "[Socket服务器] 新客户端连接:" << clientIP << ":" << clientPort;
         qDebug() << "[Socket服务器] 当前连接数:" << clientSockets.size();
         
-        // 更新UI显示
-        updateClientCount();
+        // 更新UI显示（Socket UI已移除）
+        // updateClientCount();
     }
 }
 
@@ -1013,8 +981,8 @@ void Widget::onClientDisconnected()
         qDebug() << "[Socket服务器] 客户端断开连接:" << clientIP << ":" << clientPort;
         qDebug() << "[Socket服务器] 当前连接数:" << clientSockets.size();
         
-        // 更新UI显示
-        updateClientCount();
+        // 更新UI显示（Socket UI已移除）
+        // updateClientCount();
     }
 }
 
@@ -1056,6 +1024,26 @@ void Widget::processSocketData(const QByteArray& data)
             continue;
         }
         
+        // 优先尝试解析ASR/LLM流式协议
+        QJsonParseError perr;
+        QJsonDocument doc = QJsonDocument::fromJson(trimmedLine.toUtf8(), &perr);
+        if (perr.error == QJsonParseError::NoError && doc.isObject()) {
+            QJsonObject obj = doc.object();
+            const QString type = obj.value("type").toString();
+            if (type == "asr") {
+                const QString text = obj.value("text").toString();
+                const bool isFinal = obj.value("isFinal").toBool(false) || obj.value("is_final").toBool(false);
+                Q_EMIT asrText(text, isFinal);
+                continue;
+            }
+            if (type == "llm_stream") {
+                const QString text = obj.value("text").toString();
+                const bool isFinal = obj.value("isFinal").toBool(false) || obj.value("is_final").toBool(false);
+                Q_EMIT llmTokens(text, isFinal);
+                continue;
+            }
+        }
+        
         qDebug() << "[Socket数据处理] 处理JSON:" << trimmedLine;
         
         // 调用现有的processEmotionOutput接口
@@ -1073,19 +1061,15 @@ QString Widget::getLocalIPAddress()
 {
     // 获取本机IP地址
     QList<QHostAddress> addresses = QNetworkInterface::allAddresses();
-    
-    for (const QHostAddress& address : addresses) {
-        // 跳过回环地址和IPv6地址
-        if (address != QHostAddress::LocalHost && 
-            address.toIPv4Address() != 0 && 
-            !address.toString().contains(":")) {
-            return address.toString();
+    for (const QHostAddress &addr : addresses) {
+        if (addr.protocol() == QAbstractSocket::IPv4Protocol && addr != QHostAddress::LocalHost) {
+            return addr.toString();
         }
     }
-    
-    return "127.0.0.1"; // 默认返回本地回环地址
+    return QHostAddress(QHostAddress::LocalHost).toString();
 }
 
+#if 0 // disable Socket server UI block
 void Widget::setupSocketServerUI()
 {
     // 创建Socket服务器控制面板
@@ -1179,24 +1163,24 @@ void Widget::setupSocketServerUI()
 
 void Widget::updateServerStatus()
 {
+    // 当未创建Socket服务器控制UI时，直接返回，避免空指针
+    if (!serverStatusLabel || !ipAddressLabel || !startServerButton || !stopServerButton || !portSpinBox) {
+        return;
+    }
     if (isServerRunning) {
         serverStatusLabel->setText("运行中");
         serverStatusLabel->setStyleSheet("color: green; font-weight: bold;");
-        
         QString localIP = getLocalIPAddress();
         ipAddressLabel->setText(QString("%1:%2").arg(localIP).arg(serverPort));
         ipAddressLabel->setStyleSheet("color: #333; font-family: monospace; font-weight: bold;");
-        
         startServerButton->setEnabled(false);
         stopServerButton->setEnabled(true);
         portSpinBox->setEnabled(false);
     } else {
         serverStatusLabel->setText("未启动");
         serverStatusLabel->setStyleSheet("color: red; font-weight: bold;");
-        
         ipAddressLabel->setText("未启动");
         ipAddressLabel->setStyleSheet("color: #666; font-family: monospace;");
-        
         startServerButton->setEnabled(true);
         stopServerButton->setEnabled(false);
         portSpinBox->setEnabled(true);
@@ -1205,9 +1189,12 @@ void Widget::updateServerStatus()
 
 void Widget::updateClientCount()
 {
+    // 当未创建Socket服务器控制UI时，直接返回，避免空指针
+    if (!clientCountLabel) {
+        return;
+    }
     int count = clientSockets.size();
     clientCountLabel->setText(QString::number(count));
-    
     if (count > 0) {
         clientCountLabel->setStyleSheet("color: #4CAF50; font-weight: bold;");
     } else {
@@ -1234,5 +1221,180 @@ void Widget::onPortChanged(int port)
     if (!isServerRunning) {
         serverPort = static_cast<quint16>(port);
     }
+}
+#endif // disable Socket server UI block
+
+
+
+// =================== 新增：HTTP流式方法与显示逻辑 ===================
+void Widget::startNerStreamJson(const QUrl& baseUrl, const QString& memoryId, const QString& text)
+{
+    if (nerReply) {
+        disconnect(nerReply, nullptr, this, nullptr);
+        nerReply->abort();
+        nerReply->deleteLater();
+        nerReply = nullptr;
+    }
+    llmPending.clear();
+    llmDisplayed.clear();
+    llmStreamFinished = false;
+    updateLlmDisplay();
+
+    QUrl url(baseUrl);
+    QString path = url.path();
+    if (!path.endsWith('/')) path += '/';
+    path += "ner";
+    url.setPath(path);
+    QUrlQuery query(url);
+    query.addQueryItem("memoryId", memoryId);
+    url.setQuery(query);
+
+    QNetworkRequest req(url);
+    req.setHeader(QNetworkRequest::ContentTypeHeader, QString("application/json"));
+
+    QJsonObject body;
+    body.insert("text", text);
+    QJsonDocument doc(body);
+
+    nerReply = nerNam->post(req, doc.toJson(QJsonDocument::Compact));
+    connect(nerReply, &QNetworkReply::readyRead, this, &Widget::onNerReadyRead);
+    connect(nerReply, &QNetworkReply::finished, this, &Widget::onNerFinished);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+    connect(nerReply, &QNetworkReply::errorOccurred, this, &Widget::onNerError);
+#else
+    connect(nerReply, QOverload<QNetworkReply::NetworkError>::of(&QNetworkReply::error), this, &Widget::onNerError);
+#endif
+}
+
+void Widget::startNerStreamMultipart(const QUrl& baseUrl, const QString& memoryId, const QString& imagePath)
+{
+    if (nerReply) {
+        disconnect(nerReply, nullptr, this, nullptr);
+        nerReply->abort();
+        nerReply->deleteLater();
+        nerReply = nullptr;
+    }
+    llmPending.clear();
+    llmDisplayed.clear();
+    llmStreamFinished = false;
+    updateLlmDisplay();
+
+    QUrl url(baseUrl);
+    QString path = url.path();
+    if (!path.endsWith('/')) path += '/';
+    path += "ner";
+    url.setPath(path);
+    QUrlQuery query(url);
+    query.addQueryItem("memoryId", memoryId);
+    url.setQuery(query);
+
+    QNetworkRequest req(url);
+
+    QHttpMultiPart* multi = new QHttpMultiPart(QHttpMultiPart::FormDataType);
+
+    QHttpPart filePart;
+    filePart.setHeader(QNetworkRequest::ContentDispositionHeader, QVariant("form-data; name=\"imageFile\"; filename=\"upload.jpg\""));
+    QFile* file = new QFile(imagePath);
+    if (!file->open(QIODevice::ReadOnly)) {
+        delete file;
+        delete multi;
+        Q_EMIT llmTokens(QStringLiteral("[错误] 无法打开文件: ") + imagePath + "\n", true);
+        return;
+    }
+    filePart.setBodyDevice(file);
+    file->setParent(multi); // multi析构时释放
+
+    multi->append(filePart);
+
+    nerReply = nerNam->post(req, multi);
+    multi->setParent(nerReply); // reply完成后释放
+
+    connect(nerReply, &QNetworkReply::readyRead, this, &Widget::onNerReadyRead);
+    connect(nerReply, &QNetworkReply::finished, this, &Widget::onNerFinished);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+    connect(nerReply, &QNetworkReply::errorOccurred, this, &Widget::onNerError);
+#else
+    connect(nerReply, QOverload<QNetworkReply::NetworkError>::of(&QNetworkReply::error), this, &Widget::onNerError);
+#endif
+}
+
+void Widget::onNerReadyRead()
+{
+    if (!nerReply) return;
+    const QByteArray chunk = nerReply->readAll();
+    if (chunk.isEmpty()) return;
+    nerBuffer.append(chunk);
+    const QString text = QString::fromUtf8(chunk);
+    if (!text.isEmpty()) {
+        Q_EMIT llmTokens(text, false);
+    }
+}
+
+void Widget::onNerFinished()
+{
+    llmStreamFinished = true;
+    Q_EMIT llmTokens(QString(), true);
+    if (nerReply) {
+        nerReply->deleteLater();
+        nerReply = nullptr;
+    }
+}
+
+void Widget::onNerError(QNetworkReply::NetworkError code)
+{
+    Q_UNUSED(code);
+    const QString err = nerReply ? nerReply->errorString() : QStringLiteral("unknown error");
+    Q_EMIT llmTokens(QStringLiteral("[网络错误] ") + err + "\n", true);
+}
+
+void Widget::onLlmTokens(const QString& text, bool isFinal)
+{
+    // 如果上一轮已结束且收到新文本，则清空显示，保证“每次只显示一次的回复”
+    if (llmStreamFinished && !text.isEmpty()) {
+        llmPending.clear();
+        llmDisplayed.clear();
+        llmStreamFinished = false;
+        updateLlmDisplay();
+    }
+    if (!text.isEmpty()) {
+        llmPending.append(text);
+    }
+    if (isFinal) {
+        llmStreamFinished = true;
+    }
+    if (!llmTypingTimer->isActive()) {
+        llmTypingTimer->start();
+    }
+}
+
+void Widget::onTypingTick()
+{
+    if (llmPending.isEmpty()) {
+        if (llmStreamFinished) {
+            llmTypingTimer->stop();
+        }
+        return;
+    }
+    const int n = qMin(llmCharsPerTick, llmPending.size());
+    const QString chunk = llmPending.left(n);
+    llmPending.remove(0, n);
+    llmDisplayed.append(chunk);
+    updateLlmDisplay();
+}
+
+void Widget::updateLlmDisplay()
+{
+    // 使用QPlainTextEdit显示本轮完整回复，超过两行自动出现滚动条，并滚动到最新
+    llmEdit->setPlainText(llmDisplayed);
+    if (auto *bar = llmEdit->verticalScrollBar()) {
+        bar->setValue(bar->maximum());
+    }
+}
+
+void Widget::updateAsrText(const QString& text, bool isFinal)
+{
+    Q_UNUSED(isFinal);
+    // 直接显示最近一条ASR结果
+    asrLabel->setText(QString("ASR: %1").arg(text));
 }
 

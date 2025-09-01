@@ -267,6 +267,31 @@ debug/moc_widget.cpp: widget.h \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qtcpsocket.h \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/QNetworkInterface \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qnetworkinterface.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/QNetworkAccessManager \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qnetworkaccessmanager.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qnetworkrequest.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QSharedDataPointer \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QString \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QUrl \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QVariant \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QVector \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QObject \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/QSslConfiguration \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qsslconfiguration.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qsslsocket.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qsslerror.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qsslcertificate.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/qcryptographichash.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/qdatetime.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qssl.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QFlags \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/QSslPreSharedKeyAuthenticator \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qsslpresharedkeyauthenticator.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QMetaType \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/QNetworkReply \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qnetworkreply.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QIODevice \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/QNetworkRequest \
 		debug/moc_predefs.h \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/bin/moc.exe
 	D:\Qt\Qt5.13.2\5.13.2\mingw73_64\bin\moc.exe $(DEFINES) --include D:/WorkSpace/qt/faceshiftDemo/faceshiftDemo/debug/moc_predefs.h -ID:/Qt/Qt5.13.2/5.13.2/mingw73_64/mkspecs/win32-g++ -ID:/WorkSpace/qt/faceshiftDemo/faceshiftDemo -ID:/Qt/Qt5.13.2/5.13.2/mingw73_64/include -ID:/Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtWidgets -ID:/Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui -ID:/Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtANGLE -ID:/Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork -ID:/Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore -I"D:/Program Files/Compiler/x86_64-14.2.0-release-posix-seh-ucrt-rt_v12-rev2/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++" -I"D:/Program Files/Compiler/x86_64-14.2.0-release-posix-seh-ucrt-rt_v12-rev2/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/x86_64-w64-mingw32" -I"D:/Program Files/Compiler/x86_64-14.2.0-release-posix-seh-ucrt-rt_v12-rev2/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/backward" -I"D:/Program Files/Compiler/x86_64-14.2.0-release-posix-seh-ucrt-rt_v12-rev2/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include" -I"D:/Program Files/Compiler/x86_64-14.2.0-release-posix-seh-ucrt-rt_v12-rev2/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include-fixed" -I"D:/Program Files/Compiler/x86_64-14.2.0-release-posix-seh-ucrt-rt_v12-rev2/mingw64/x86_64-w64-mingw32/include" widget.h -o debug\moc_widget.cpp
@@ -456,6 +481,31 @@ debug/main.o: main.cpp widget.h \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qtcpsocket.h \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/QNetworkInterface \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qnetworkinterface.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/QNetworkAccessManager \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qnetworkaccessmanager.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qnetworkrequest.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QSharedDataPointer \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QString \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QUrl \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QVariant \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QVector \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QObject \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/QSslConfiguration \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qsslconfiguration.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qsslsocket.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qsslerror.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qsslcertificate.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/qcryptographichash.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/qdatetime.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qssl.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QFlags \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/QSslPreSharedKeyAuthenticator \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qsslpresharedkeyauthenticator.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QMetaType \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/QNetworkReply \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qnetworkreply.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QIODevice \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/QNetworkRequest \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtWidgets/QApplication \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtWidgets/qapplication.h \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/qcoreapplication.h \
@@ -627,8 +677,32 @@ debug/widget.o: widget.cpp widget.h \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qtcpsocket.h \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/QNetworkInterface \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qnetworkinterface.h \
-		ui_widget.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/QNetworkAccessManager \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qnetworkaccessmanager.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qnetworkrequest.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QSharedDataPointer \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QString \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QUrl \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QVariant \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QVector \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QObject \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/QSslConfiguration \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qsslconfiguration.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qsslsocket.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qsslerror.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qsslcertificate.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/qcryptographichash.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/qdatetime.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qssl.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QFlags \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/QSslPreSharedKeyAuthenticator \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qsslpresharedkeyauthenticator.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QMetaType \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/QNetworkReply \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qnetworkreply.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QIODevice \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/QNetworkRequest \
+		ui_widget.h \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtWidgets/QApplication \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtWidgets/qapplication.h \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/qcoreapplication.h \
@@ -649,7 +723,14 @@ debug/widget.o: widget.cpp widget.h \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtWidgets/qgraphicseffect.h \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/QFont \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QDebug \
-		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QJsonParseError
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QJsonParseError \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QCoreApplication \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/QHttpMultiPart \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qhttpmultipart.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QByteArray \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QFile \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QUrlQuery \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/QHostAddress
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o debug\widget.o widget.cpp
 
 debug/moc_widget.o: debug/moc_widget.cpp 
