@@ -2,8 +2,8 @@ QT       += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-# 添加动画模块支持
-QT += widgets core gui
+# 添加动画模块和网络模块支持
+QT += widgets core gui network
 
 CONFIG += c++11
 

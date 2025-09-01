@@ -1,43 +1,178 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-智能用药提醒机器人表情插值生成器
-功能：生成所有表情相互切换的中间插值表情并保存到对应文件夹
-作者：QT_ROS_Dev
+智能用药提醒机器人表情插值生成器 - 基于线条的表情系统
+功能：使用几何线条绘制表情，通过线条端点插值生成中间表情
 """
 
 import os
 import json
 import math
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 from typing import Dict, List, Tuple, NamedTuple
 
+class LineSegment(NamedTuple):
+    """线段定义"""
+    start: Tuple[float, float]  # 起点坐标
+    end: Tuple[float, float]    # 终点坐标
+    width: int                  # 线条宽度
+    color: Tuple[int, int, int] # RGB颜色
+
 class ExpressionParams(NamedTuple):
-    """表情参数结构"""
+    """基于线条的表情参数结构"""
     background_color: Tuple[int, int, int]  # RGB背景色
-    text_color: Tuple[int, int, int]        # RGB文字色
-    scale: float                            # 缩放比例
-    opacity: float                          # 透明度
-    emoji: str                              # 表情符号
+    face_lines: List[LineSegment]           # 面部线条列表
+    eyes: List[LineSegment]                 # 眼睛线条
+    eyebrows: List[LineSegment]             # 眉毛线条
+    mouth: List[LineSegment]                # 嘴巴线条
     description: str                        # 描述
 
 class ExpressionInterpolator:
-    """表情插值生成器"""
+    """基于线条的表情插值生成器"""
     
     def __init__(self):
+        # 图像尺寸和中心点
+        self.image_size = (200, 200)
+        self.center_x, self.center_y = 100, 100
+        
+        # 定义7种基础表情的线条坐标
         self.expressions = {
-            'Happy': ExpressionParams((144, 238, 144), (0, 100, 0), 1.2, 1.0, '😊', '开心'),
-            'Caring': ExpressionParams((255, 182, 193), (139, 69, 19), 1.1, 0.9, '🤗', '关怀'),
-            'Concerned': ExpressionParams((255, 165, 0), (139, 69, 19), 0.9, 0.8, '😟', '担忧'),
-            'Encouraging': ExpressionParams((173, 216, 230), (25, 25, 112), 1.3, 1.0, '💪', '鼓励'),
-            'Alert': ExpressionParams((255, 99, 71), (139, 0, 0), 1.1, 1.0, '⚠️', '警示'),
-            'Sad': ExpressionParams((169, 169, 169), (105, 105, 105), 0.8, 0.7, '😢', '悲伤'),
-            'Neutral': ExpressionParams((211, 211, 211), (105, 105, 105), 1.0, 0.8, '😐', '中性')
+            'Happy': self._create_happy_expression(),
+            'Caring': self._create_caring_expression(),
+            'Concerned': self._create_concerned_expression(),
+            'Encouraging': self._create_encouraging_expression(),
+            'Alert': self._create_alert_expression(),
+            'Sad': self._create_sad_expression(),
+            'Neutral': self._create_neutral_expression()
         }
         
         self.output_dir = 'expression_interpolations'
-        self.image_size = (200, 200)
         self.interpolation_steps = 10  # 每对表情之间生成10个中间状态
+    
+    def _create_neutral_expression(self) -> ExpressionParams:
+        """创建中性表情"""
+        face_lines = [LineSegment((50, 50), (150, 50), 2, (100, 100, 100)),  # 上边框
+                     LineSegment((150, 50), (150, 150), 2, (100, 100, 100)), # 右边框
+                     LineSegment((150, 150), (50, 150), 2, (100, 100, 100)), # 下边框
+                     LineSegment((50, 150), (50, 50), 2, (100, 100, 100))]   # 左边框
+        
+        eyes = [LineSegment((70, 80), (80, 80), 3, (0, 0, 0)),    # 左眼
+               LineSegment((120, 80), (130, 80), 3, (0, 0, 0))]   # 右眼
+        
+        eyebrows = [LineSegment((65, 70), (85, 70), 2, (80, 80, 80)),  # 左眉毛
+                   LineSegment((115, 70), (135, 70), 2, (80, 80, 80))] # 右眉毛
+        
+        mouth = [LineSegment((85, 120), (115, 120), 2, (60, 60, 60))]  # 直线嘴巴
+        
+        return ExpressionParams((240, 240, 240), face_lines, eyes, eyebrows, mouth, '中性')
+    
+    def _create_happy_expression(self) -> ExpressionParams:
+        """创建开心表情"""
+        face_lines = [LineSegment((50, 50), (150, 50), 2, (0, 150, 0)),
+                     LineSegment((150, 50), (150, 150), 2, (0, 150, 0)),
+                     LineSegment((150, 150), (50, 150), 2, (0, 150, 0)),
+                     LineSegment((50, 150), (50, 50), 2, (0, 150, 0))]
+        
+        eyes = [LineSegment((70, 75), (80, 85), 3, (0, 0, 0)),    # 左眼（弯曲向上）
+               LineSegment((120, 85), (130, 75), 3, (0, 0, 0))]   # 右眼（弯曲向上）
+        
+        eyebrows = [LineSegment((65, 65), (85, 60), 2, (0, 100, 0)),  # 左眉毛（上扬）
+                   LineSegment((115, 60), (135, 65), 2, (0, 100, 0))] # 右眉毛（上扬）
+        
+        mouth = [LineSegment((80, 115), (100, 125), 3, (0, 80, 0)),   # 嘴巴左半部分（向上弯曲）
+                LineSegment((100, 125), (120, 115), 3, (0, 80, 0))]  # 嘴巴右半部分（向上弯曲）
+        
+        return ExpressionParams((200, 255, 200), face_lines, eyes, eyebrows, mouth, '开心')
+    
+    def _create_sad_expression(self) -> ExpressionParams:
+        """创建悲伤表情"""
+        face_lines = [LineSegment((50, 50), (150, 50), 2, (120, 120, 120)),
+                     LineSegment((150, 50), (150, 150), 2, (120, 120, 120)),
+                     LineSegment((150, 150), (50, 150), 2, (120, 120, 120)),
+                     LineSegment((50, 150), (50, 50), 2, (120, 120, 120))]
+        
+        eyes = [LineSegment((70, 85), (80, 75), 3, (0, 0, 0)),    # 左眼（向下）
+               LineSegment((120, 75), (130, 85), 3, (0, 0, 0))]   # 右眼（向下）
+        
+        eyebrows = [LineSegment((65, 75), (85, 70), 2, (100, 100, 100)),  # 左眉毛（下垂）
+                   LineSegment((115, 70), (135, 75), 2, (100, 100, 100))] # 右眉毛（下垂）
+        
+        mouth = [LineSegment((80, 125), (100, 115), 3, (80, 80, 80)),   # 嘴巴左半部分（向下弯曲）
+                LineSegment((100, 115), (120, 125), 3, (80, 80, 80))]  # 嘴巴右半部分（向下弯曲）
+        
+        return ExpressionParams((200, 200, 200), face_lines, eyes, eyebrows, mouth, '悲伤')
+    
+    def _create_caring_expression(self) -> ExpressionParams:
+        """创建关怀表情"""
+        face_lines = [LineSegment((50, 50), (150, 50), 2, (200, 100, 150)),
+                     LineSegment((150, 50), (150, 150), 2, (200, 100, 150)),
+                     LineSegment((150, 150), (50, 150), 2, (200, 100, 150)),
+                     LineSegment((50, 150), (50, 50), 2, (200, 100, 150))]
+        
+        eyes = [LineSegment((70, 78), (80, 82), 3, (0, 0, 0)),    # 左眼（温和）
+               LineSegment((120, 82), (130, 78), 3, (0, 0, 0))]   # 右眼（温和）
+        
+        eyebrows = [LineSegment((65, 68), (85, 65), 2, (150, 80, 100)),  # 左眉毛（轻微上扬）
+                   LineSegment((115, 65), (135, 68), 2, (150, 80, 100))] # 右眉毛（轻微上扬）
+        
+        mouth = [LineSegment((85, 118), (100, 122), 3, (120, 60, 80)),   # 嘴巴左半部分（微笑）
+                LineSegment((100, 122), (115, 118), 3, (120, 60, 80))]  # 嘴巴右半部分（微笑）
+        
+        return ExpressionParams((255, 220, 230), face_lines, eyes, eyebrows, mouth, '关怀')
+    
+    def _create_concerned_expression(self) -> ExpressionParams:
+        """创建担忧表情"""
+        face_lines = [LineSegment((50, 50), (150, 50), 2, (200, 150, 50)),
+                     LineSegment((150, 50), (150, 150), 2, (200, 150, 50)),
+                     LineSegment((150, 150), (50, 150), 2, (200, 150, 50)),
+                     LineSegment((50, 150), (50, 50), 2, (200, 150, 50))]
+        
+        eyes = [LineSegment((70, 80), (80, 80), 3, (0, 0, 0)),    # 左眼（正常）
+               LineSegment((120, 80), (130, 80), 3, (0, 0, 0))]   # 右眼（正常）
+        
+        eyebrows = [LineSegment((65, 72), (85, 68), 2, (150, 100, 0)),   # 左眉毛（皱眉）
+                   LineSegment((115, 68), (135, 72), 2, (150, 100, 0))]  # 右眉毛（皱眉）
+        
+        mouth = [LineSegment((85, 120), (100, 120), 2, (100, 80, 0)),   # 嘴巴左半部分（紧闭）
+                LineSegment((100, 120), (115, 120), 2, (100, 80, 0))]  # 嘴巴右半部分（紧闭）
+        
+        return ExpressionParams((255, 230, 150), face_lines, eyes, eyebrows, mouth, '担忧')
+    
+    def _create_encouraging_expression(self) -> ExpressionParams:
+        """创建鼓励表情"""
+        face_lines = [LineSegment((50, 50), (150, 50), 2, (50, 150, 200)),
+                     LineSegment((150, 50), (150, 150), 2, (50, 150, 200)),
+                     LineSegment((150, 150), (50, 150), 2, (50, 150, 200)),
+                     LineSegment((50, 150), (50, 50), 2, (50, 150, 200))]
+        
+        eyes = [LineSegment((70, 75), (80, 85), 4, (0, 0, 0)),    # 左眼（有力）
+               LineSegment((120, 85), (130, 75), 4, (0, 0, 0))]   # 右眼（有力）
+        
+        eyebrows = [LineSegment((65, 62), (85, 58), 3, (0, 80, 150)),   # 左眉毛（坚定上扬）
+                   LineSegment((115, 58), (135, 62), 3, (0, 80, 150))]  # 右眉毛（坚定上扬）
+        
+        mouth = [LineSegment((80, 112), (100, 128), 4, (0, 60, 120)),   # 嘴巴左半部分（大笑）
+                LineSegment((100, 128), (120, 112), 4, (0, 60, 120))]  # 嘴巴右半部分（大笑）
+        
+        return ExpressionParams((200, 230, 255), face_lines, eyes, eyebrows, mouth, '鼓励')
+    
+    def _create_alert_expression(self) -> ExpressionParams:
+        """创建警示表情"""
+        face_lines = [LineSegment((50, 50), (150, 50), 3, (200, 50, 50)),
+                     LineSegment((150, 50), (150, 150), 3, (200, 50, 50)),
+                     LineSegment((150, 150), (50, 150), 3, (200, 50, 50)),
+                     LineSegment((50, 150), (50, 50), 3, (200, 50, 50))]
+        
+        eyes = [LineSegment((68, 78), (82, 78), 4, (0, 0, 0)),    # 左眼（瞪大）
+               LineSegment((118, 78), (132, 78), 4, (0, 0, 0))]   # 右眼（瞪大）
+        
+        eyebrows = [LineSegment((65, 65), (85, 62), 3, (150, 0, 0)),   # 左眉毛（紧皱）
+                   LineSegment((115, 62), (135, 65), 3, (150, 0, 0))]  # 右眉毛（紧皱）
+        
+        mouth = [LineSegment((85, 125), (100, 125), 3, (120, 0, 0)),   # 嘴巴左半部分（严肃）
+                LineSegment((100, 125), (115, 125), 3, (120, 0, 0))]  # 嘴巴右半部分（严肃）
+        
+        return ExpressionParams((255, 200, 200), face_lines, eyes, eyebrows, mouth, '警示')
         
     def smooth_interpolation(self, t: float) -> float:
         """平滑插值函数 (ease-in-out)"""
@@ -52,68 +187,97 @@ class ExpressionInterpolator:
             int(color1[2] + t * (color2[2] - color1[2]))
         )
     
+    def interpolate_point(self, point1: Tuple[float, float], 
+                         point2: Tuple[float, float], t: float) -> Tuple[float, float]:
+        """点坐标插值"""
+        return (
+            point1[0] + t * (point2[0] - point1[0]),
+            point1[1] + t * (point2[1] - point1[1])
+        )
+    
+    def interpolate_line_segment(self, line1: LineSegment, 
+                               line2: LineSegment, t: float) -> LineSegment:
+        """线段插值"""
+        start = self.interpolate_point(line1.start, line2.start, t)
+        end = self.interpolate_point(line1.end, line2.end, t)
+        width = int(line1.width + t * (line2.width - line1.width))
+        color = self.interpolate_color(line1.color, line2.color, t)
+        return LineSegment(start, end, width, color)
+    
+    def interpolate_line_list(self, lines1: List[LineSegment], 
+                            lines2: List[LineSegment], t: float) -> List[LineSegment]:
+        """线条列表插值"""
+        # 确保两个列表长度相同，如果不同则进行补齐处理
+        max_len = max(len(lines1), len(lines2))
+        
+        # 补齐较短的列表
+        extended_lines1 = list(lines1)
+        extended_lines2 = list(lines2)
+        
+        # 如果lines1较短，用最后一个线段补齐
+        while len(extended_lines1) < max_len:
+            if extended_lines1:
+                extended_lines1.append(extended_lines1[-1])
+            else:
+                # 如果为空，创建一个默认的透明线段
+                extended_lines1.append(LineSegment((100, 100), (100, 100), 1, (128, 128, 128)))
+        
+        # 如果lines2较短，用最后一个线段补齐
+        while len(extended_lines2) < max_len:
+            if extended_lines2:
+                extended_lines2.append(extended_lines2[-1])
+            else:
+                # 如果为空，创建一个默认的透明线段
+                extended_lines2.append(LineSegment((100, 100), (100, 100), 1, (128, 128, 128)))
+        
+        result = []
+        for i in range(max_len):
+            result.append(self.interpolate_line_segment(extended_lines1[i], extended_lines2[i], t))
+        return result
+     
     def interpolate_expressions(self, expr1: ExpressionParams, 
                               expr2: ExpressionParams, t: float) -> ExpressionParams:
-        """表情参数插值"""
+        """基于线条的表情参数插值"""
         # 应用平滑插值
         smooth_t = self.smooth_interpolation(max(0.0, min(1.0, t)))
         
         # 插值计算
         bg_color = self.interpolate_color(expr1.background_color, expr2.background_color, smooth_t)
-        text_color = self.interpolate_color(expr1.text_color, expr2.text_color, smooth_t)
-        scale = expr1.scale + smooth_t * (expr2.scale - expr1.scale)
-        opacity = expr1.opacity + smooth_t * (expr2.opacity - expr1.opacity)
+        face_lines = self.interpolate_line_list(expr1.face_lines, expr2.face_lines, smooth_t)
+        eyes = self.interpolate_line_list(expr1.eyes, expr2.eyes, smooth_t)
+        eyebrows = self.interpolate_line_list(expr1.eyebrows, expr2.eyebrows, smooth_t)
+        mouth = self.interpolate_line_list(expr1.mouth, expr2.mouth, smooth_t)
         
-        # 表情符号在中点切换
-        if smooth_t < 0.5:
-            emoji = expr1.emoji
-            description = f"{expr1.description}→{expr2.description}"
-        else:
-            emoji = expr2.emoji
-            description = f"{expr1.description}→{expr2.description}"
+        description = f"{expr1.description}→{expr2.description}"
             
-        return ExpressionParams(bg_color, text_color, scale, opacity, emoji, description)
+        return ExpressionParams(bg_color, face_lines, eyes, eyebrows, mouth, description)
     
     def create_expression_image(self, params: ExpressionParams, 
                               filename: str) -> None:
-        """创建表情图像"""
+        """使用线条绘制创建表情图像"""
         # 创建图像
-        img = Image.new('RGBA', self.image_size, (*params.background_color, int(255 * params.opacity)))
+        img = Image.new('RGB', self.image_size, params.background_color)
         draw = ImageDraw.Draw(img)
         
-        # 绘制边框
-        border_color = tuple(max(0, c - 50) for c in params.text_color)
-        draw.rectangle([5, 5, self.image_size[0]-5, self.image_size[1]-5], 
-                      outline=border_color, width=3)
+        # 绘制面部边框线条
+        for line in params.face_lines:
+            draw.line([line.start, line.end], fill=line.color, width=line.width)
         
-        # 计算字体大小
-        base_font_size = 48
-        font_size = int(base_font_size * params.scale)
+        # 绘制眼睛线条
+        for line in params.eyes:
+            draw.line([line.start, line.end], fill=line.color, width=line.width)
         
-        try:
-            # 尝试使用系统字体
-            font = ImageFont.truetype("arial.ttf", font_size)
-        except:
-            try:
-                # Windows系统字体
-                font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", font_size)
-            except:
-                # 使用默认字体
-                font = ImageFont.load_default()
+        # 绘制眉毛线条
+        for line in params.eyebrows:
+            draw.line([line.start, line.end], fill=line.color, width=line.width)
         
-        # 绘制表情符号
-        text = params.emoji
-        bbox = draw.textbbox((0, 0), text, font=font)
-        text_width = bbox[2] - bbox[0]
-        text_height = bbox[3] - bbox[1]
-        
-        x = (self.image_size[0] - text_width) // 2
-        y = (self.image_size[1] - text_height) // 2
-        
-        draw.text((x, y), text, fill=params.text_color, font=font)
+        # 绘制嘴巴线条
+        for line in params.mouth:
+            draw.line([line.start, line.end], fill=line.color, width=line.width)
         
         # 保存图像
         img.save(filename, 'PNG')
+        print(f"✓ 生成线条表情图像: {filename}")
     
     def generate_interpolation_sequence(self, expr1_name: str, expr2_name: str) -> List[str]:
         """生成两个表情之间的插值序列"""
@@ -148,10 +312,10 @@ class ExpressionInterpolator:
                 'description': interpolated.description,
                 'params': {
                     'background_color': interpolated.background_color,
-                    'text_color': interpolated.text_color,
-                    'scale': interpolated.scale,
-                    'opacity': interpolated.opacity,
-                    'emoji': interpolated.emoji
+                    'face_lines_count': len(interpolated.face_lines),
+                    'eyes_count': len(interpolated.eyes),
+                    'eyebrows_count': len(interpolated.eyebrows),
+                    'mouth_count': len(interpolated.mouth)
                 }
             })
         
@@ -210,10 +374,10 @@ class ExpressionInterpolator:
             'expressions': {name: {
                 'params': {
                     'background_color': params.background_color,
-                    'text_color': params.text_color,
-                    'scale': params.scale,
-                    'opacity': params.opacity,
-                    'emoji': params.emoji,
+                    'face_lines_count': len(params.face_lines),
+                    'eyes_count': len(params.eyes),
+                    'eyebrows_count': len(params.eyebrows),
+                    'mouth_count': len(params.mouth),
                     'description': params.description
                 }
             } for name, params in self.expressions.items()},
@@ -238,19 +402,12 @@ def main():
     # 显示表情列表
     print("\n📋 支持的表情类型:")
     for i, (name, params) in enumerate(interpolator.expressions.items(), 1):
-        print(f"  {i}. {name} ({params.description}) {params.emoji}")
+        print(f"  {i}. {name} ({params.description})")
     
     print(f"\n🎯 将生成 {len(interpolator.expressions)} × {len(interpolator.expressions)-1} = {len(interpolator.expressions) * (len(interpolator.expressions)-1)} 个插值序列")
     
-    # 用户确认
-    try:
-        response = input("\n是否开始生成？(y/N): ").strip().lower()
-        if response not in ['y', 'yes', '是']:
-            print("已取消生成。")
-            return
-    except KeyboardInterrupt:
-        print("\n已取消生成。")
-        return
+    # 自动开始生成
+    print("\n🚀 开始自动生成图像序列...")
     
     # 开始生成
     try:

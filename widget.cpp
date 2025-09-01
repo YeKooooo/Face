@@ -8,6 +8,11 @@
 #include <QLabel>
 #include <QGraphicsOpacityEffect>
 #include <QFont>
+#include <QDebug>
+#include <QJsonObject>
+#include <QJsonDocument>
+#include <QJsonParseError>
+#include <QCoreApplication>
 
 Widget::Widget(QWidget *parent)
     : QWidget(parent)
@@ -19,16 +24,52 @@ Widget::Widget(QWidget *parent)
     , interpolationTimer(new QTimer(this))
     , interpolationStep(0)
     , maxInterpolationSteps(50)
+    , imageAnimationTimer(new QTimer(this))
+    , currentImageFrame(0)
+    , interpolationBasePath("expression_interpolations")
+    , useImageSequences(true)
+    , expressionDurationTimer(new QTimer(this))
+    , previousExpression(ExpressionType::Neutral)
+    , tcpServer(nullptr)
+    , serverPort(8888)
+    , isServerRunning(false)
 {
     ui->setupUi(this);
     setWindowTitle("智能用药提醒机器人表情系统 - 插值版");
     resize(800, 600);
     
+    // 资源路径自动探测：优先当前工作目录，其次可执行文件目录/父目录
+    {
+        QStringList candidates;
+        candidates << QStringLiteral("expression_interpolations");
+        const QString appDir = QCoreApplication::applicationDirPath();
+        candidates << QDir(appDir).filePath("expression_interpolations");
+        candidates << QDir(appDir + "/..").filePath("expression_interpolations");
+        for (const QString& p : candidates) {
+            if (QDir(p).exists()) { interpolationBasePath = p; break; }
+        }
+        qDebug() << "插值资源根目录:" << interpolationBasePath;
+    }
+    
     initializeExpressions();
     initializeExpressionParams();
     setupFaceDisplay();
     setupInterpolationUI();
+    setupSocketServerUI();
     createAnimations();
+    
+    // 初始化图像序列功能
+    loadImageSequences();
+    
+    // 连接图像动画定时器
+    connect(imageAnimationTimer, &QTimer::timeout, this, &Widget::onImageAnimationStep);
+    
+    // 连接表情持续时间定时器
+    connect(expressionDurationTimer, &QTimer::timeout, this, &Widget::onExpressionDurationTimeout);
+    expressionDurationTimer->setSingleShot(true);
+    
+    // 初始化Socket服务器
+    initializeSocketServer();
     
     // 连接插值定时器
     connect(interpolationTimer, &QTimer::timeout, this, [this]() {
@@ -139,9 +180,26 @@ void Widget::setupInterpolationUI()
     sliderLayout->addWidget(sliderLabel);
     sliderLayout->addWidget(interpolationSlider);
     
+    // 模式切换（固定为图像序列模式）
+    QHBoxLayout* modeLayout = new QHBoxLayout();
+    QLabel* modeLabel = new QLabel("动画模式:");
+    toggleModeButton = new QPushButton("图像序列模式");
+    toggleModeButton->setCheckable(true);
+    toggleModeButton->setChecked(true);
+    toggleModeButton->setEnabled(false); // 禁止切换，始终使用图像序列
+    toggleModeButton->setToolTip("已固定为图像序列模式");
+    toggleModeButton->setStyleSheet(
+        "QPushButton { background-color: #e0e0e0; border: 1px solid #999; padding: 5px; }"
+        "QPushButton:checked { background-color: #4CAF50; color: white; }"
+    );
+    
+    modeLayout->addWidget(modeLabel);
+    modeLayout->addWidget(toggleModeButton);
+    modeLayout->addStretch();
+    
     // 动画控制
     QHBoxLayout* animationLayout = new QHBoxLayout();
-    playAnimationButton = new QPushButton("播放插值动画");
+    playAnimationButton = new QPushButton("播放图像动画");
     QLabel* speedLabel = new QLabel("速度(ms):");
     animationSpeedSpinBox = new QSpinBox();
     animationSpeedSpinBox->setRange(10, 1000);
@@ -151,6 +209,7 @@ void Widget::setupInterpolationUI()
     animationLayout->addWidget(speedLabel);
     animationLayout->addWidget(animationSpeedSpinBox);
     
+    interpolationLayout->addLayout(modeLayout);
     interpolationLayout->addLayout(expressionSelectLayout);
     interpolationLayout->addLayout(sliderLayout);
     interpolationLayout->addLayout(animationLayout);
@@ -163,7 +222,18 @@ void Widget::setupInterpolationUI()
     connect(interpolationSlider, &QSlider::valueChanged,
             this, &Widget::onInterpolationSliderChanged);
     connect(playAnimationButton, &QPushButton::clicked,
-            this, &Widget::playInterpolationAnimation);
+            this, [this]() {
+                if (useImageSequences) {
+                    playImageSequenceAnimation();
+                } else {
+                    playInterpolationAnimation();
+                }
+            });
+    // 根据图像序列可用性设置初始状态（固定图像序列）
+    toggleModeButton->setChecked(true);
+    toggleModeButton->setEnabled(false);
+    toggleModeButton->setToolTip("已固定为图像序列模式");
+    useImageSequences = true;
     
     // 将插值面板添加到主布局
     QVBoxLayout* mainLayout = qobject_cast<QVBoxLayout*>(layout());
@@ -203,10 +273,9 @@ ExpressionParams Widget::interpolateExpressions(const ExpressionParams& from,
     
     // 表情符号和描述的切换（在中点切换）
     if (t < 0.5) {
-        result.emoji = from.emoji;
+        // 移除emoji使用，保留描述
         result.description = from.description;
     } else {
-        result.emoji = to.emoji;
         result.description = to.description;
     }
     
@@ -217,8 +286,8 @@ void Widget::applyExpressionParams(const ExpressionParams& params)
 {
     if (!faceLabel) return;
     
-    // 应用表情符号
-    faceLabel->setText(params.emoji);
+    // 应用表情符号（禁用emoji显示）
+    faceLabel->setText("");
     
     // 应用样式
     QString styleSheet = QString(
@@ -248,6 +317,19 @@ void Widget::applyExpressionParams(const ExpressionParams& params)
 void Widget::onInterpolationSliderChanged(int value)
 {
     double t = static_cast<double>(value) / 100.0;
+    if (useImageSequences) {
+        // 使用滑块预览当前序列帧
+        QString seq = QString("%1_to_%2")
+                        .arg(expressionTypeToString(fromExpression))
+                        .arg(expressionTypeToString(toExpression));
+        if (imageSequenceCache.contains(seq) && !imageSequenceCache[seq].isEmpty()) {
+            const QList<QPixmap>& frames = imageSequenceCache[seq];
+            int idx = qBound(0, static_cast<int>(t * (frames.size() - 1)), frames.size() - 1);
+            faceLabel->setPixmap(frames[idx]);
+            return; // 仅使用图像序列
+        }
+    }
+    // 回退到参数插值（通常不会执行）
     ExpressionParams params = interpolateExpressions(
         expressionParams[fromExpression], 
         expressionParams[toExpression], 
@@ -288,14 +370,13 @@ void Widget::setupFaceDisplay()
     // 创建主布局
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
     
-    // 创建表情显示标签
-    ExpressionData neutralData = expressions[currentExpression];
-    faceLabel = new QLabel(neutralData.emoji, this);
+    // 创建表情显示标签（不使用emoji初始显示）
+    faceLabel = new QLabel("", this);
     faceLabel->setAlignment(Qt::AlignCenter);
     QFont font = faceLabel->font();
     font.setPointSize(80);
     faceLabel->setFont(font);
-    faceLabel->setStyleSheet(QString("QLabel { color: #333; background-color: %1; border-radius: 15px; padding: 30px; }").arg(neutralData.color));
+    faceLabel->setStyleSheet("QLabel { color: #333; background-color: #f0f0f0; border-radius: 15px; padding: 30px; }");
     
     // 创建按钮网格布局
     QGridLayout *buttonLayout = new QGridLayout();
@@ -309,7 +390,8 @@ void Widget::setupFaceDisplay()
     int row = 0, col = 0;
     for (ExpressionType type : expressionOrder) {
         ExpressionData data = expressions[type];
-        QPushButton *button = new QPushButton(QString("%1 %2").arg(data.emoji, data.name), this);
+        // 按要求不展示emoji，仅展示名称
+        QPushButton *button = new QPushButton(QString("%1").arg(data.name), this);
         
         // 设置按钮样式
         QString buttonStyle = QString(
@@ -421,11 +503,29 @@ void Widget::animateToExpression(ExpressionType type)
     shrinkGroup->addAnimation(shrinkAnim);
     shrinkGroup->addAnimation(fadeOutAnim);
     
-    // 第二阶段：更换表情和颜色
+    // 第二阶段：更换为目标表情对应的静态图像帧（禁用emoji文本）
     QPropertyAnimation *changeExpression = new QPropertyAnimation(expressionAnimation);
     changeExpression->setDuration(100);
-    connect(changeExpression, &QPropertyAnimation::finished, [this, type, newExpressionData]() {
-        faceLabel->setText(newExpressionData.emoji);
+    // 预选一帧作为静态显示：优先 current->target 的序列末帧；否则 Neutral->target 的序列末帧
+    QString seqPrimary = QString("%1_to_%2")
+        .arg(expressionTypeToString(currentExpression))
+        .arg(expressionTypeToString(type));
+    QString seqNeutral = QString("Neutral_to_%1").arg(expressionTypeToString(type));
+    QPixmap targetFrame;
+    bool hasFrame = false;
+    if (imageSequenceCache.contains(seqPrimary) && !imageSequenceCache[seqPrimary].isEmpty()) {
+        targetFrame = imageSequenceCache[seqPrimary].last();
+        hasFrame = true;
+    } else if (imageSequenceCache.contains(seqNeutral) && !imageSequenceCache[seqNeutral].isEmpty()) {
+        targetFrame = imageSequenceCache[seqNeutral].last();
+        hasFrame = true;
+    }
+    connect(changeExpression, &QPropertyAnimation::finished, [this, type, newExpressionData, hasFrame, targetFrame]() {
+        // 禁用emoji文本
+        faceLabel->setText("");
+        if (hasFrame) {
+            faceLabel->setPixmap(targetFrame);
+        }
         faceLabel->setStyleSheet(QString("QLabel { color: #333; background-color: %1; border-radius: 15px; padding: 30px; }").arg(newExpressionData.color));
         currentExpression = type;
     });
@@ -463,7 +563,13 @@ void Widget::switchToExpression()
     // 查找对应的表情类型
     for (auto it = expressionButtons.begin(); it != expressionButtons.end(); ++it) {
         if (it.value() == senderButton) {
-            animateToExpression(it.key());
+            if (useImageSequences) {
+                // 使用图像序列模式
+                switchToExpressionWithImages(it.key());
+            } else {
+                // 使用参数插值模式
+                animateToExpression(it.key());
+            }
             break;
         }
     }
@@ -472,5 +578,661 @@ void Widget::switchToExpression()
 void Widget::onAnimationFinished()
 {
     isAnimating = false;
+}
+
+// 图像序列相关函数实现
+QString Widget::expressionTypeToString(ExpressionType type)
+{
+    switch (type) {
+        case ExpressionType::Happy: return "Happy";
+        case ExpressionType::Caring: return "Caring";
+        case ExpressionType::Concerned: return "Concerned";
+        case ExpressionType::Encouraging: return "Encouraging";
+        case ExpressionType::Alert: return "Alert";
+        case ExpressionType::Sad: return "Sad";
+        case ExpressionType::Neutral: return "Neutral";
+        default: return "Neutral";
+    }
+}
+
+QString Widget::getSequencePath(ExpressionType from, ExpressionType to)
+{
+    QString fromStr = expressionTypeToString(from);
+    QString toStr = expressionTypeToString(to);
+    return QString("%1/%2_to_%3").arg(interpolationBasePath, fromStr, toStr);
+}
+
+void Widget::loadImageSequences()
+{
+    QDir baseDir(interpolationBasePath);
+    if (!baseDir.exists()) {
+        qDebug() << "插值图像目录不存在:" << interpolationBasePath;
+        useImageSequences = false;
+        return;
+    }
+    
+    qDebug() << "开始加载图像序列...";
+    
+    // 获取所有表情类型
+    QList<ExpressionType> expressions = {
+        ExpressionType::Happy, ExpressionType::Caring, ExpressionType::Concerned,
+        ExpressionType::Encouraging, ExpressionType::Alert, ExpressionType::Sad,
+        ExpressionType::Neutral
+    };
+    
+    int loadedSequences = 0;
+    
+    // 预加载所有表情对的图像序列
+    for (ExpressionType from : expressions) {
+        for (ExpressionType to : expressions) {
+            if (from != to) {
+                QString sequenceName = QString("%1_to_%2")
+                    .arg(expressionTypeToString(from))
+                    .arg(expressionTypeToString(to));
+                
+                preloadImageSequence(sequenceName);
+                if (imageSequenceCache.contains(sequenceName)) {
+                    loadedSequences++;
+                }
+            }
+        }
+    }
+    
+    useImageSequences = (loadedSequences > 0);
+    qDebug() << QString("加载完成，共加载 %1 个图像序列").arg(loadedSequences);
+    
+    if (useImageSequences) {
+        qDebug() << "图像序列模式已启用";
+    } else {
+        qDebug() << "图像序列模式未启用，将使用参数插值模式";
+    }
+}
+
+void Widget::preloadImageSequence(const QString& sequenceName)
+{
+    QString sequencePath = QString("%1/%2").arg(interpolationBasePath, sequenceName);
+    QDir sequenceDir(sequencePath);
+    
+    if (!sequenceDir.exists()) {
+        return;
+    }
+    
+    // 获取所有PNG文件并按名称排序
+    QStringList filters;
+    filters << "frame_*.png";
+    QStringList imageFiles = sequenceDir.entryList(filters, QDir::Files, QDir::Name);
+    
+    if (imageFiles.isEmpty()) {
+        return;
+    }
+    
+    QList<QPixmap> pixmaps;
+    for (const QString& fileName : imageFiles) {
+        QString fullPath = sequenceDir.absoluteFilePath(fileName);
+        QPixmap pixmap(fullPath);
+        
+        if (!pixmap.isNull()) {
+            // 缩放到合适大小
+            pixmap = pixmap.scaled(200, 200, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            pixmaps.append(pixmap);
+        }
+    }
+    
+    if (!pixmaps.isEmpty()) {
+        imageSequenceCache[sequenceName] = pixmaps;
+        qDebug() << QString("预加载序列 %1: %2 帧").arg(sequenceName).arg(pixmaps.size());
+    }
+}
+
+void Widget::switchToExpressionWithImages(ExpressionType targetType)
+{
+    if (!useImageSequences || isAnimating) {
+        return;
+    }
+    
+    // 设置动画的起始和目标表情
+    fromExpression = currentExpression;
+    toExpression = targetType;
+    
+    QString sequenceName = QString("%1_to_%2")
+        .arg(expressionTypeToString(fromExpression))
+        .arg(expressionTypeToString(toExpression));
+    
+    qDebug() << QString("尝试播放序列: %1 (从 %2 到 %3)")
+        .arg(sequenceName)
+        .arg(expressionTypeToString(fromExpression))
+        .arg(expressionTypeToString(toExpression));
+    
+    if (!imageSequenceCache.contains(sequenceName)) {
+        qDebug() << "未找到图像序列:" << sequenceName;
+        qDebug() << "可用序列:" << imageSequenceCache.keys();
+        // 不再回退到emoji动画：选择一个最佳可用的静态帧进行显示
+        QString seqNeutral = QString("Neutral_to_%1").arg(expressionTypeToString(targetType));
+        if (imageSequenceCache.contains(seqNeutral) && !imageSequenceCache[seqNeutral].isEmpty()) {
+            faceLabel->setText("");
+            faceLabel->setPixmap(imageSequenceCache[seqNeutral].last());
+            currentExpression = targetType;
+        } else {
+            // 若无可用序列，保持当前图像，仅更新状态，确保不显示emoji
+            faceLabel->setText("");
+            currentExpression = targetType;
+        }
+        return;
+    }
+    
+    isAnimating = true;
+    currentImageFrame = 0;
+    
+    // 停止其他动画
+    if (interpolationTimer->isActive()) {
+        interpolationTimer->stop();
+    }
+    if (expressionAnimation && expressionAnimation->state() == QAbstractAnimation::Running) {
+        expressionAnimation->stop();
+    }
+    
+    // 开始图像序列动画，使用速度框设置的间隔
+    int interval = animationSpeedSpinBox ? animationSpeedSpinBox->value() : 50;
+    imageAnimationTimer->start(interval);
+    
+    qDebug() << QString("开始播放图像序列: %1 (%2 帧)")
+        .arg(sequenceName)
+        .arg(imageSequenceCache[sequenceName].size());
+}
+
+void Widget::onImageAnimationStep()
+{
+    // 构建当前正在播放的序列名称
+    QString activeSequence = QString("%1_to_%2")
+        .arg(expressionTypeToString(fromExpression))
+        .arg(expressionTypeToString(toExpression));
+    
+    if (!imageSequenceCache.contains(activeSequence)) {
+        qDebug() << "未找到活动序列:" << activeSequence;
+        imageAnimationTimer->stop();
+        isAnimating = false;
+        return;
+    }
+    
+    const QList<QPixmap>& frames = imageSequenceCache[activeSequence];
+    
+    if (currentImageFrame < frames.size()) {
+        // 显示当前帧
+        faceLabel->setPixmap(frames[currentImageFrame]);
+        currentImageFrame++;
+        
+        qDebug() << QString("播放帧 %1/%2 - 序列: %3")
+            .arg(currentImageFrame)
+            .arg(frames.size())
+            .arg(activeSequence);
+    } else {
+        // 动画完成
+        imageAnimationTimer->stop();
+        isAnimating = false;
+        currentImageFrame = 0;
+        
+        // 更新当前表情状态为目标表情
+        currentExpression = toExpression;
+        playAnimationButton->setText("播放图像动画");
+        
+        qDebug() << "图像序列动画完成，当前表情:" << expressionTypeToString(currentExpression);
+    }
+}
+
+void Widget::playImageSequenceAnimation()
+{
+    if (!useImageSequences) {
+        // 回退到参数插值动画
+        playInterpolationAnimation();
+        return;
+    }
+    
+    if (imageAnimationTimer->isActive()) {
+        imageAnimationTimer->stop();
+        isAnimating = false;
+        playAnimationButton->setText("播放图像动画");
+        return;
+    }
+    
+    // 设置播放间隔
+    imageAnimationTimer->setInterval(animationSpeedSpinBox->value());
+    // 按当前起始/目标表情播放
+    switchToExpressionWithImages(toExpression);
+    playAnimationButton->setText("停止动画");
+}
+
+// EmotionOutput接口实现
+void Widget::processEmotionOutput(const QString& jsonString)
+{
+    EmotionOutput emotionData = parseEmotionOutputJson(jsonString);
+    if (!emotionData.expression_type.isEmpty()) {
+        processEmotionOutput(emotionData);
+    }
+}
+
+void Widget::processEmotionOutput(const EmotionOutput& emotionData)
+{
+    // 停止当前的表情持续时间定时器
+    if (expressionDurationTimer->isActive()) {
+        expressionDurationTimer->stop();
+    }
+    
+    // 记录当前表情作为上一个表情
+    previousExpression = currentExpression;
+    
+    // 解析目标表情类型
+    ExpressionType targetType = stringToExpressionType(emotionData.expression_type);
+    
+    // 记录触发原因
+    logEmotionTrigger(emotionData.trigger_reason, targetType);
+    
+    // 保存当前emotion数据
+    currentEmotionOutput = emotionData;
+    
+    // 切换到目标表情
+    if (useImageSequences) {
+        switchToExpressionWithImages(targetType);
+    } else {
+        animateToExpression(targetType);
+    }
+    
+    // 设置持续时间（如果不是永久状态）
+    if (emotionData.duration_ms > 0) {
+        expressionDurationTimer->start(emotionData.duration_ms);
+    }
+}
+
+EmotionOutput Widget::parseEmotionOutputJson(const QString& jsonString)
+{
+    EmotionOutput result;
+    
+    QJsonParseError parseError;
+    QJsonDocument doc = QJsonDocument::fromJson(jsonString.toUtf8(), &parseError);
+    
+    if (parseError.error != QJsonParseError::NoError) {
+        qDebug() << "JSON解析错误:" << parseError.errorString();
+        return result;
+    }
+    
+    QJsonObject rootObj = doc.object();
+    
+    // 检查是否包含emotion_output字段
+    if (rootObj.contains("emotion_output") && rootObj["emotion_output"].isObject()) {
+        QJsonObject emotionObj = rootObj["emotion_output"].toObject();
+        
+        if (emotionObj.contains("expression_type")) {
+            result.expression_type = emotionObj["expression_type"].toString();
+        }
+        
+        if (emotionObj.contains("duration_ms")) {
+            result.duration_ms = emotionObj["duration_ms"].toInt(3000); // 默认3秒
+        }
+        
+        if (emotionObj.contains("trigger_reason")) {
+            result.trigger_reason = emotionObj["trigger_reason"].toString();
+        }
+    }
+    
+    return result;
+}
+
+ExpressionType Widget::stringToExpressionType(const QString& typeString)
+{
+    QString lowerType = typeString.toLower();
+    
+    if (lowerType == "happy" || lowerType == "开心") {
+        return ExpressionType::Happy;
+    } else if (lowerType == "caring" || lowerType == "关怀") {
+        return ExpressionType::Caring;
+    } else if (lowerType == "concerned" || lowerType == "担忧") {
+        return ExpressionType::Concerned;
+    } else if (lowerType == "encouraging" || lowerType == "鼓励") {
+        return ExpressionType::Encouraging;
+    } else if (lowerType == "alert" || lowerType == "警觉") {
+        return ExpressionType::Alert;
+    } else if (lowerType == "sad" || lowerType == "难过") {
+        return ExpressionType::Sad;
+    } else if (lowerType == "neutral" || lowerType == "中性") {
+        return ExpressionType::Neutral;
+    }
+    
+    qDebug() << "未知的表情类型:" << typeString << "，使用默认中性表情";
+    return ExpressionType::Neutral;
+}
+
+void Widget::logEmotionTrigger(const QString& reason, ExpressionType type)
+{
+    QString typeStr = expressionTypeToString(type);
+    qDebug() << "[表情切换] 触发原因:" << reason << "目标表情:" << typeStr;
+}
+
+void Widget::onExpressionDurationTimeout()
+{
+    // 持续时间结束，恢复到上一个表情或中性表情
+    ExpressionType restoreType = (previousExpression != currentExpression) ? 
+                                previousExpression : ExpressionType::Neutral;
+    
+    qDebug() << "[表情切换] 持续时间结束，恢复到:" << expressionTypeToString(restoreType);
+    
+    if (useImageSequences) {
+        switchToExpressionWithImages(restoreType);
+    } else {
+        animateToExpression(restoreType);
+    }
+}
+
+// ==================== Socket服务器相关函数实现 ====================
+
+void Widget::initializeSocketServer()
+{
+    tcpServer = new QTcpServer(this);
+    
+    // 连接服务器信号
+    connect(tcpServer, &QTcpServer::newConnection, this, &Widget::onNewConnection);
+    
+    // 自动启动服务器
+    startSocketServer(serverPort);
+    
+    qDebug() << "[Socket服务器] 初始化完成";
+}
+
+void Widget::startSocketServer(quint16 port)
+{
+    if (isServerRunning) {
+        qDebug() << "[Socket服务器] 服务器已在运行，端口:" << serverPort;
+        return;
+    }
+    
+    serverPort = port;
+    
+    if (tcpServer->listen(QHostAddress::Any, serverPort)) {
+        isServerRunning = true;
+        QString localIP = getLocalIPAddress();
+        qDebug() << "[Socket服务器] 启动成功";
+        qDebug() << "[Socket服务器] 监听地址:" << localIP << ":" << serverPort;
+        qDebug() << "[Socket服务器] Python客户端可连接到:" << localIP << ":" << serverPort;
+    } else {
+        qDebug() << "[Socket服务器] 启动失败:" << tcpServer->errorString();
+        isServerRunning = false;
+    }
+}
+
+void Widget::stopSocketServer()
+{
+    if (!isServerRunning) {
+        return;
+    }
+    
+    // 断开所有客户端连接
+    for (QTcpSocket* socket : clientSockets) {
+        socket->disconnectFromHost();
+        socket->deleteLater();
+    }
+    clientSockets.clear();
+    
+    // 停止服务器监听
+    tcpServer->close();
+    isServerRunning = false;
+    
+    qDebug() << "[Socket服务器] 已停止";
+}
+
+void Widget::onNewConnection()
+{
+    while (tcpServer->hasPendingConnections()) {
+        QTcpSocket* clientSocket = tcpServer->nextPendingConnection();
+        clientSockets.append(clientSocket);
+        
+        // 连接客户端信号
+        connect(clientSocket, &QTcpSocket::readyRead, this, &Widget::onDataReceived);
+        connect(clientSocket, &QTcpSocket::disconnected, this, &Widget::onClientDisconnected);
+        connect(clientSocket, QOverload<QAbstractSocket::SocketError>::of(&QAbstractSocket::error),
+                this, &Widget::onSocketError);
+        
+        QString clientIP = clientSocket->peerAddress().toString();
+        quint16 clientPort = clientSocket->peerPort();
+        
+        qDebug() << "[Socket服务器] 新客户端连接:" << clientIP << ":" << clientPort;
+        qDebug() << "[Socket服务器] 当前连接数:" << clientSockets.size();
+        
+        // 更新UI显示
+        updateClientCount();
+    }
+}
+
+void Widget::onClientDisconnected()
+{
+    QTcpSocket* clientSocket = qobject_cast<QTcpSocket*>(sender());
+    if (clientSocket) {
+        QString clientIP = clientSocket->peerAddress().toString();
+        quint16 clientPort = clientSocket->peerPort();
+        
+        clientSockets.removeAll(clientSocket);
+        clientSocket->deleteLater();
+        
+        qDebug() << "[Socket服务器] 客户端断开连接:" << clientIP << ":" << clientPort;
+        qDebug() << "[Socket服务器] 当前连接数:" << clientSockets.size();
+        
+        // 更新UI显示
+        updateClientCount();
+    }
+}
+
+void Widget::onDataReceived()
+{
+    QTcpSocket* clientSocket = qobject_cast<QTcpSocket*>(sender());
+    if (!clientSocket) {
+        return;
+    }
+    
+    QByteArray data = clientSocket->readAll();
+    QString clientIP = clientSocket->peerAddress().toString();
+    
+    qDebug() << "[Socket服务器] 收到数据来自" << clientIP << ":" << data;
+    
+    // 处理接收到的数据
+    processSocketData(data);
+}
+
+void Widget::onSocketError(QAbstractSocket::SocketError error)
+{
+    QTcpSocket* clientSocket = qobject_cast<QTcpSocket*>(sender());
+    if (clientSocket) {
+        QString clientIP = clientSocket->peerAddress().toString();
+        qDebug() << "[Socket服务器] 客户端错误" << clientIP << ":" << error << clientSocket->errorString();
+    }
+}
+
+void Widget::processSocketData(const QByteArray& data)
+{
+    QString jsonString = QString::fromUtf8(data).trimmed();
+    
+    // 处理可能的多行JSON数据
+    QStringList jsonLines = jsonString.split('\n', QString::SkipEmptyParts);
+    
+    for (const QString& line : jsonLines) {
+        QString trimmedLine = line.trimmed();
+        if (trimmedLine.isEmpty()) {
+            continue;
+        }
+        
+        qDebug() << "[Socket数据处理] 处理JSON:" << trimmedLine;
+        
+        // 调用现有的processEmotionOutput接口
+        try {
+            processEmotionOutput(trimmedLine);
+        } catch (const std::exception& e) {
+            qDebug() << "[Socket数据处理] JSON处理异常:" << e.what();
+        } catch (...) {
+            qDebug() << "[Socket数据处理] 未知异常";
+        }
+    }
+}
+
+QString Widget::getLocalIPAddress()
+{
+    // 获取本机IP地址
+    QList<QHostAddress> addresses = QNetworkInterface::allAddresses();
+    
+    for (const QHostAddress& address : addresses) {
+        // 跳过回环地址和IPv6地址
+        if (address != QHostAddress::LocalHost && 
+            address.toIPv4Address() != 0 && 
+            !address.toString().contains(":")) {
+            return address.toString();
+        }
+    }
+    
+    return "127.0.0.1"; // 默认返回本地回环地址
+}
+
+void Widget::setupSocketServerUI()
+{
+    // 创建Socket服务器控制面板
+    QGroupBox* socketGroup = new QGroupBox("Socket服务器控制", this);
+    QVBoxLayout* socketLayout = new QVBoxLayout(socketGroup);
+    
+    // 服务器状态显示
+    QHBoxLayout* statusLayout = new QHBoxLayout();
+    QLabel* statusTitleLabel = new QLabel("服务器状态:");
+    serverStatusLabel = new QLabel("未启动");
+    serverStatusLabel->setStyleSheet("color: red; font-weight: bold;");
+    
+    statusLayout->addWidget(statusTitleLabel);
+    statusLayout->addWidget(serverStatusLabel);
+    statusLayout->addStretch();
+    
+    // IP地址显示
+    QHBoxLayout* ipLayout = new QHBoxLayout();
+    QLabel* ipTitleLabel = new QLabel("监听地址:");
+    ipAddressLabel = new QLabel("未启动");
+    ipAddressLabel->setStyleSheet("color: #666; font-family: monospace;");
+    
+    ipLayout->addWidget(ipTitleLabel);
+    ipLayout->addWidget(ipAddressLabel);
+    ipLayout->addStretch();
+    
+    // 客户端连接数显示
+    QHBoxLayout* clientLayout = new QHBoxLayout();
+    QLabel* clientTitleLabel = new QLabel("连接数:");
+    clientCountLabel = new QLabel("0");
+    clientCountLabel->setStyleSheet("color: #333; font-weight: bold;");
+    
+    clientLayout->addWidget(clientTitleLabel);
+    clientLayout->addWidget(clientCountLabel);
+    clientLayout->addStretch();
+    
+    // 端口设置
+    QHBoxLayout* portLayout = new QHBoxLayout();
+    QLabel* portLabel = new QLabel("端口:");
+    portSpinBox = new QSpinBox();
+    portSpinBox->setRange(1024, 65535);
+    portSpinBox->setValue(serverPort);
+    portSpinBox->setToolTip("设置Socket服务器监听端口");
+    
+    portLayout->addWidget(portLabel);
+    portLayout->addWidget(portSpinBox);
+    portLayout->addStretch();
+    
+    // 控制按钮
+    QHBoxLayout* buttonLayout = new QHBoxLayout();
+    startServerButton = new QPushButton("启动服务器");
+    stopServerButton = new QPushButton("停止服务器");
+    
+    startServerButton->setStyleSheet(
+        "QPushButton { background-color: #4CAF50; color: white; font-weight: bold; padding: 8px; }"
+        "QPushButton:hover { background-color: #45a049; }"
+        "QPushButton:disabled { background-color: #cccccc; color: #666666; }"
+    );
+    
+    stopServerButton->setStyleSheet(
+        "QPushButton { background-color: #f44336; color: white; font-weight: bold; padding: 8px; }"
+        "QPushButton:hover { background-color: #da190b; }"
+        "QPushButton:disabled { background-color: #cccccc; color: #666666; }"
+    );
+    
+    buttonLayout->addWidget(startServerButton);
+    buttonLayout->addWidget(stopServerButton);
+    
+    // 添加所有布局到主面板
+    socketLayout->addLayout(statusLayout);
+    socketLayout->addLayout(ipLayout);
+    socketLayout->addLayout(clientLayout);
+    socketLayout->addLayout(portLayout);
+    socketLayout->addLayout(buttonLayout);
+    
+    // 连接信号槽
+    connect(startServerButton, &QPushButton::clicked, this, &Widget::onStartServerClicked);
+    connect(stopServerButton, &QPushButton::clicked, this, &Widget::onStopServerClicked);
+    connect(portSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), this, &Widget::onPortChanged);
+    
+    // 初始化UI状态
+    updateServerStatus();
+    updateClientCount();
+    
+    // 将Socket面板添加到主布局
+    QVBoxLayout* mainLayout = qobject_cast<QVBoxLayout*>(layout());
+    if (mainLayout) {
+        mainLayout->addWidget(socketGroup);
+    }
+}
+
+void Widget::updateServerStatus()
+{
+    if (isServerRunning) {
+        serverStatusLabel->setText("运行中");
+        serverStatusLabel->setStyleSheet("color: green; font-weight: bold;");
+        
+        QString localIP = getLocalIPAddress();
+        ipAddressLabel->setText(QString("%1:%2").arg(localIP).arg(serverPort));
+        ipAddressLabel->setStyleSheet("color: #333; font-family: monospace; font-weight: bold;");
+        
+        startServerButton->setEnabled(false);
+        stopServerButton->setEnabled(true);
+        portSpinBox->setEnabled(false);
+    } else {
+        serverStatusLabel->setText("未启动");
+        serverStatusLabel->setStyleSheet("color: red; font-weight: bold;");
+        
+        ipAddressLabel->setText("未启动");
+        ipAddressLabel->setStyleSheet("color: #666; font-family: monospace;");
+        
+        startServerButton->setEnabled(true);
+        stopServerButton->setEnabled(false);
+        portSpinBox->setEnabled(true);
+    }
+}
+
+void Widget::updateClientCount()
+{
+    int count = clientSockets.size();
+    clientCountLabel->setText(QString::number(count));
+    
+    if (count > 0) {
+        clientCountLabel->setStyleSheet("color: #4CAF50; font-weight: bold;");
+    } else {
+        clientCountLabel->setStyleSheet("color: #333; font-weight: bold;");
+    }
+}
+
+void Widget::onStartServerClicked()
+{
+    quint16 port = static_cast<quint16>(portSpinBox->value());
+    startSocketServer(port);
+    updateServerStatus();
+}
+
+void Widget::onStopServerClicked()
+{
+    stopSocketServer();
+    updateServerStatus();
+    updateClientCount();
+}
+
+void Widget::onPortChanged(int port)
+{
+    if (!isServerRunning) {
+        serverPort = static_cast<quint16>(port);
+    }
 }
 
