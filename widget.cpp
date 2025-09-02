@@ -41,20 +41,14 @@ Widget::Widget(QWidget *parent)
     , imageAnimationIntervalMs(50)
 {
     ui->setupUi(this);
-    setWindowTitle("智能用药提醒机器人表情系统 - 插值版");
+    setWindowTitle("智能用药提醒机器人表情系统");
     resize(800, 600);
     
-    // 资源路径自动探测：优先当前工作目录，其次可执行文件目录/父目录
+    // 固定资源目录：与 .pro 同级的 expression_interpolations（相对路径）
     {
-        QStringList candidates;
-        candidates << QStringLiteral("expression_interpolations");
         const QString appDir = QCoreApplication::applicationDirPath();
-        candidates << QDir(appDir).filePath("expression_interpolations");
-        candidates << QDir(appDir + "/..").filePath("expression_interpolations");
-        for (const QString& p : candidates) {
-            if (QDir(p).exists()) { interpolationBasePath = p; break; }
-        }
-        qDebug() << "插值资源根目录:" << interpolationBasePath;
+        interpolationBasePath = QDir(appDir + "/..").filePath("expression_interpolations");
+        qDebug() << "插值资源根目录(固定):" << interpolationBasePath;
     }
     
     initializeExpressions();

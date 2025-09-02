@@ -1,0 +1,52 @@
+# Qt / Qt Creator project ignores
+
+# Build directories
+debug/
+release/
+deploy/
+build*/
+
+# Qt generated files
+.qmake.stash
+Makefile
+Makefile.*
+
+# Qt MOC/UI/RCC generated sources
+moc_*.cpp
+moc_*.h
+*.moc
+ui_*.h
+qrc_*.cpp
+
+# Object and binary outputs
+*.o
+*.obj
+*.a
+*.lib
+*.la
+*.lo
+*.dll
+*.dylib
+*.so
+*.so.*
+*.exe
+*.app
+*.apk
+
+# Qt Creator / IDE settings
+*.pro.user
+*.user
+*.qbs.user*
+.idea/
+.vscode/
+
+# Logs
+*.log
+
+# OS / misc
+.DS_Store
+Thumbs.db
+
+# Python cache
+__pycache__/
+*.pyc
