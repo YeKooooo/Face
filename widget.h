@@ -219,7 +219,7 @@ private:
     QString llmDisplayed;
     bool llmStreamFinished;
     int llmCharsPerTick;
-    
+    QPlainTextEdit* asrEdit; // 新增ASR编辑框指针
 private Q_SLOTS:
     // Socket相关槽函数
     void onNewConnection();

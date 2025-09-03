@@ -386,19 +386,36 @@ void Widget::setupFaceDisplay()
     faceLabel->setStyleSheet("QLabel { background-color: #f0f0f0; border-radius: 10px; font-size: 120px; padding: 20px; }");
 
     // ========== ASR/LLM 显示区域 ==========
-    QGroupBox* streamGroup = new QGroupBox("语音识别与LLM流式输出", this);
+    QGroupBox* streamGroup = new QGroupBox(this);
+streamGroup->setTitle(QString());
+streamGroup->setStyleSheet("QGroupBox { border: none; margin-top: 0px; padding-top: 0px; }");
     QVBoxLayout* streamLayout = new QVBoxLayout(streamGroup);
 
     // 统一放大字体，适配800x1280
     QFont bigFont = this->font();
     bigFont.setPointSize(18);
 
-    // ASR 显示（固定前缀：用户：）
+    // ASR 前缀（固定前缀：用户：）
     asrLabel = new QLabel("用户：", this);
     asrLabel->setFont(bigFont);
-    asrLabel->setWordWrap(true);
-    asrLabel->setStyleSheet("QLabel { background:#fafafa; border:1px solid #ddd; border-radius:6px; padding:6px; }");
+    asrLabel->setStyleSheet("QLabel { color:#333; }");
     streamLayout->addWidget(asrLabel);
+
+    // ASR 文本框（与LLM一致使用QPlainTextEdit，两行窗口）
+    asrEdit = new QPlainTextEdit(this);
+    asrEdit->setReadOnly(true);
+    asrEdit->setFont(bigFont);
+    asrEdit->setLineWrapMode(QPlainTextEdit::WidgetWidth);
+    asrEdit->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    asrEdit->setStyleSheet("QPlainTextEdit { background:#fafafa; border:1px solid #ddd; border-radius:6px; padding:6px; }");
+    {
+        QFontMetrics fm(asrEdit->font());
+        const int lineH = fm.lineSpacing();
+        const int frame = asrEdit->frameWidth();
+        const int padding = 8;
+        asrEdit->setFixedHeight(lineH * 2 + frame * 2 + padding);
+    }
+    streamLayout->addWidget(asrEdit);
 
     // LLM 前缀（固定前缀：机器人：）
     llmPrefixLabel = new QLabel("机器人：", this);
@@ -1394,7 +1411,7 @@ void Widget::onTypingTick()
 
 void Widget::updateLlmDisplay()
 {
-    // 更新 LLM 文本；固定前缀由 llmPrefixLabel 显示
+    // 框内仅显示内容，前缀在框上一行标签中
     llmEdit->setPlainText(llmDisplayed);
     
     // 将光标移动到文末并确保可见，避免首次刷新不显示的问题
@@ -1416,7 +1433,7 @@ void Widget::updateLlmDisplay()
 void Widget::updateAsrText(const QString& text, bool isFinal)
 {
     Q_UNUSED(isFinal);
-    // 直接显示最近一条ASR结果（固定前缀：用户：）
-    asrLabel->setText(QString("用户：%1").arg(text));
+    // 框内仅显示内容，前缀在框上一行标签中
+    asrEdit->setPlainText(text);
 }
 
