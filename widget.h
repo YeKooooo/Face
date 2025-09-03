@@ -210,6 +210,7 @@ private:
     // LLM/ASR 文本显示与HTTP接入成员
     QLabel* asrLabel;
     QPlainTextEdit* llmEdit; // 替换为可滚动文本框
+    QLabel* llmPrefixLabel; // "机器人："固定前缀
     QNetworkAccessManager* nerNam;
     QNetworkReply* nerReply;
     QByteArray nerBuffer;

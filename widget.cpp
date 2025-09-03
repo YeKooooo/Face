@@ -20,6 +20,7 @@
 #include <QUrlQuery>
 #include <QHostAddress>
 #include <QScrollBar>
+#include <QTextCursor>
 
 Widget::Widget(QWidget *parent)
     : QWidget(parent)
@@ -42,7 +43,7 @@ Widget::Widget(QWidget *parent)
 {
     ui->setupUi(this);
     setWindowTitle("智能用药提醒机器人表情系统");
-    resize(800, 600);
+    resize(1280, 800); // 适配800x1280屏幕
     
     // 固定资源目录：与 .pro 同级的 expression_interpolations（相对路径）
     {
@@ -387,12 +388,31 @@ void Widget::setupFaceDisplay()
     // ========== ASR/LLM 显示区域 ==========
     QGroupBox* streamGroup = new QGroupBox("语音识别与LLM流式输出", this);
     QVBoxLayout* streamLayout = new QVBoxLayout(streamGroup);
-    asrLabel = new QLabel("ASR: ", this);
-    // 可滚动的QPlainTextEdit，限制两行可视高度
+
+    // 统一放大字体，适配800x1280
+    QFont bigFont = this->font();
+    bigFont.setPointSize(18);
+
+    // ASR 显示（固定前缀：用户：）
+    asrLabel = new QLabel("用户：", this);
+    asrLabel->setFont(bigFont);
+    asrLabel->setWordWrap(true);
+    asrLabel->setStyleSheet("QLabel { background:#fafafa; border:1px solid #ddd; border-radius:6px; padding:6px; }");
+    streamLayout->addWidget(asrLabel);
+
+    // LLM 前缀（固定前缀：机器人：）
+    llmPrefixLabel = new QLabel("机器人：", this);
+    llmPrefixLabel->setFont(bigFont);
+    llmPrefixLabel->setStyleSheet("QLabel { color:#333; }");
+    streamLayout->addWidget(llmPrefixLabel);
+
+    // LLM 文本（两行窗口，超出自动滚动到底部）
     llmEdit = new QPlainTextEdit(this);
     llmEdit->setReadOnly(true);
+    llmEdit->setFont(bigFont);
     llmEdit->setLineWrapMode(QPlainTextEdit::WidgetWidth);
     llmEdit->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    llmEdit->setStyleSheet("QPlainTextEdit { background:#f7fbff; border:1px solid #cfe8ff; border-radius:6px; padding:6px; }");
     {
         QFontMetrics fm(llmEdit->font());
         const int lineH = fm.lineSpacing();
@@ -400,10 +420,6 @@ void Widget::setupFaceDisplay()
         const int padding = 8; // 与样式匹配的内边距
         llmEdit->setFixedHeight(lineH * 2 + frame * 2 + padding);
     }
-    asrLabel->setWordWrap(true);
-    asrLabel->setStyleSheet("QLabel { background:#fafafa; border:1px solid #ddd; border-radius:6px; padding:6px; font-size:12px; }");
-    llmEdit->setStyleSheet("QPlainTextEdit { background:#f7fbff; border:1px solid #cfe8ff; border-radius:6px; padding:6px; font-size:12px; }");
-    streamLayout->addWidget(asrLabel);
     streamLayout->addWidget(llmEdit);
 
     // 组装布局：去掉手动按钮与说明，仅保留表情显示与流式区域
@@ -1378,17 +1394,29 @@ void Widget::onTypingTick()
 
 void Widget::updateLlmDisplay()
 {
-    // 使用QPlainTextEdit显示本轮完整回复，超过两行自动出现滚动条，并滚动到最新
+    // 更新 LLM 文本；固定前缀由 llmPrefixLabel 显示
     llmEdit->setPlainText(llmDisplayed);
-    if (auto *bar = llmEdit->verticalScrollBar()) {
-        bar->setValue(bar->maximum());
-    }
+    
+    // 将光标移动到文末并确保可见，避免首次刷新不显示的问题
+    QTextCursor c = llmEdit->textCursor();
+    c.movePosition(QTextCursor::End);
+    llmEdit->setTextCursor(c);
+    llmEdit->ensureCursorVisible();
+    
+    // 在布局完成后，将滚动条滚到最底：
+    // - 当文本未超过两行时，最大值≈0，等价于正常显示；
+    // - 当文本超过两行（出现第3行）时，自动滚动到底部，仅显示最新两行；
+    QTimer::singleShot(0, this, [this]() {
+        if (auto *bar = llmEdit->verticalScrollBar()) {
+            bar->setValue(bar->maximum());
+        }
+    });
 }
 
 void Widget::updateAsrText(const QString& text, bool isFinal)
 {
     Q_UNUSED(isFinal);
-    // 直接显示最近一条ASR结果
-    asrLabel->setText(QString("ASR: %1").arg(text));
+    // 直接显示最近一条ASR结果（固定前缀：用户：）
+    asrLabel->setText(QString("用户：%1").arg(text));
 }
 
