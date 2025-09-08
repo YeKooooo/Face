@@ -435,7 +435,7 @@ streamGroup->setStyleSheet("QGroupBox { border: none; margin-top: 0px; padding-t
         const int lineH = fm.lineSpacing();
         const int frame = llmEdit->frameWidth();
         const int padding = 8; // 与样式匹配的内边距
-        llmEdit->setFixedHeight(lineH * 2 + frame * 2 + padding);
+        llmEdit->setFixedHeight(lineH * 4 + frame * 4 + padding);
     }
     streamLayout->addWidget(llmEdit);
 
@@ -674,8 +674,8 @@ void Widget::preloadImageSequence(const QString& sequenceName)
         QPixmap pixmap(fullPath);
         
         if (!pixmap.isNull()) {
-            // 缩放到合适大小
-            pixmap = pixmap.scaled(200, 200, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            // 缩放到800x800，从原来400x400放大一倍
+            pixmap = pixmap.scaled(600, 600, Qt::KeepAspectRatio, Qt::SmoothTransformation);
             pixmaps.append(pixmap);
         }
     }
