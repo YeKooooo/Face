@@ -69,7 +69,7 @@ debug/faceshiftDemo.exe: D:/Qt/Qt5.13.2/5.13.2/mingw73_64/lib/libQt5Widgetsd.a D
 	$(LINKER) $(LFLAGS) -o $(DESTDIR_TARGET) $(OBJECTS)  $(LIBS)
 
 qmake: FORCE
-	@$(QMAKE) -o Makefile.Debug faceshiftDemo.pro -spec win32-g++
+	@$(QMAKE) -o Makefile.Debug faceshiftDemo.pro
 
 qmake_all: FORCE
 
@@ -292,6 +292,20 @@ debug/moc_widget.cpp: widget.h \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qnetworkreply.h \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QIODevice \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/QNetworkRequest \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtWidgets/QPlainTextEdit \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtWidgets/qplaintextedit.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtWidgets/qtextedit.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtWidgets/qabstractscrollarea.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qtextdocument.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qtextoption.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qtextcursor.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qtextformat.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qpen.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qabstracttextdocumentlayout.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qtextlayout.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qglyphrun.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qrawfont.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qfontdatabase.h \
 		debug/moc_predefs.h \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/bin/moc.exe
 	D:\Qt\Qt5.13.2\5.13.2\mingw73_64\bin\moc.exe $(DEFINES) --include D:/WorkSpace/qt/faceshiftDemo/faceshiftDemo/debug/moc_predefs.h -ID:/Qt/Qt5.13.2/5.13.2/mingw73_64/mkspecs/win32-g++ -ID:/WorkSpace/qt/faceshiftDemo/faceshiftDemo -ID:/Qt/Qt5.13.2/5.13.2/mingw73_64/include -ID:/Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtWidgets -ID:/Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui -ID:/Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtANGLE -ID:/Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork -ID:/Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore -I"D:/Program Files/Compiler/x86_64-14.2.0-release-posix-seh-ucrt-rt_v12-rev2/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++" -I"D:/Program Files/Compiler/x86_64-14.2.0-release-posix-seh-ucrt-rt_v12-rev2/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/x86_64-w64-mingw32" -I"D:/Program Files/Compiler/x86_64-14.2.0-release-posix-seh-ucrt-rt_v12-rev2/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/backward" -I"D:/Program Files/Compiler/x86_64-14.2.0-release-posix-seh-ucrt-rt_v12-rev2/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include" -I"D:/Program Files/Compiler/x86_64-14.2.0-release-posix-seh-ucrt-rt_v12-rev2/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include-fixed" -I"D:/Program Files/Compiler/x86_64-14.2.0-release-posix-seh-ucrt-rt_v12-rev2/mingw64/x86_64-w64-mingw32/include" widget.h -o debug\moc_widget.cpp
@@ -506,6 +520,20 @@ debug/main.o: main.cpp widget.h \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qnetworkreply.h \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QIODevice \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/QNetworkRequest \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtWidgets/QPlainTextEdit \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtWidgets/qplaintextedit.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtWidgets/qtextedit.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtWidgets/qabstractscrollarea.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qtextdocument.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qtextoption.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qtextcursor.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qtextformat.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qpen.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qabstracttextdocumentlayout.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qtextlayout.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qglyphrun.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qrawfont.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qfontdatabase.h \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtWidgets/QApplication \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtWidgets/qapplication.h \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/qcoreapplication.h \
@@ -702,6 +730,20 @@ debug/widget.o: widget.cpp widget.h \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/qnetworkreply.h \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QIODevice \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/QNetworkRequest \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtWidgets/QPlainTextEdit \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtWidgets/qplaintextedit.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtWidgets/qtextedit.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtWidgets/qabstractscrollarea.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qtextdocument.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qtextoption.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qtextcursor.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qtextformat.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qpen.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qabstracttextdocumentlayout.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qtextlayout.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qglyphrun.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qrawfont.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/qfontdatabase.h \
 		ui_widget.h \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtWidgets/QApplication \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtWidgets/qapplication.h \
@@ -730,7 +772,10 @@ debug/widget.o: widget.cpp widget.h \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QByteArray \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QFile \
 		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtCore/QUrlQuery \
-		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/QHostAddress
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtNetwork/QHostAddress \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtWidgets/QScrollBar \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtWidgets/qscrollbar.h \
+		../../../../Qt/Qt5.13.2/5.13.2/mingw73_64/include/QtGui/QTextCursor
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o debug\widget.o widget.cpp
 
 debug/moc_widget.o: debug/moc_widget.cpp 

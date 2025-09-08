@@ -377,21 +377,22 @@ void Widget::playInterpolationAnimation()
 #endif // disable interpolation UI block
 void Widget::setupFaceDisplay()
 {
-    // 创建主布局
-    QVBoxLayout *mainLayout = new QVBoxLayout(this);
+    // 根布局：左右分栏
+    QHBoxLayout *root = new QHBoxLayout(this);
 
-    // 表情显示区域
+    // 右侧：表情显示区域（固定800x800）
     faceLabel = new QLabel("", this);
     faceLabel->setAlignment(Qt::AlignCenter);
-    faceLabel->setStyleSheet("QLabel { background-color: #f0f0f0; border-radius: 10px; font-size: 120px; padding: 20px; }");
+    faceLabel->setStyleSheet("QLabel { background-color: #f0f0f0; border-radius: 10px; font-size: 120px; }");
+    faceLabel->setFixedSize(800, 800);
 
-    // ========== ASR/LLM 显示区域 ==========
+    // ========== 左侧：ASR/LLM 显示区域 ==========
     QGroupBox* streamGroup = new QGroupBox(this);
-streamGroup->setTitle(QString());
-streamGroup->setStyleSheet("QGroupBox { border: none; margin-top: 0px; padding-top: 0px; }");
+    streamGroup->setTitle(QString());
+    streamGroup->setStyleSheet("QGroupBox { border: none; margin-top: 0px; padding-top: 0px; }");
     QVBoxLayout* streamLayout = new QVBoxLayout(streamGroup);
 
-    // 统一放大字体，适配800x1280
+    // 统一放大字体，适配1280x800
     QFont bigFont = this->font();
     bigFont.setPointSize(18);
 
@@ -401,7 +402,7 @@ streamGroup->setStyleSheet("QGroupBox { border: none; margin-top: 0px; padding-t
     asrLabel->setStyleSheet("QLabel { color:#333; }");
     streamLayout->addWidget(asrLabel);
 
-    // ASR 文本框（与LLM一致使用QPlainTextEdit，两行窗口）
+    // ASR 文本框（两行窗口）
     asrEdit = new QPlainTextEdit(this);
     asrEdit->setReadOnly(true);
     asrEdit->setFont(bigFont);
@@ -413,7 +414,7 @@ streamGroup->setStyleSheet("QGroupBox { border: none; margin-top: 0px; padding-t
         const int lineH = fm.lineSpacing();
         const int frame = asrEdit->frameWidth();
         const int padding = 8;
-        asrEdit->setFixedHeight(lineH * 2 + frame * 2 + padding);
+        asrEdit->setFixedHeight(lineH * 5 + frame * 5 + padding);
     }
     streamLayout->addWidget(asrEdit);
 
@@ -423,7 +424,7 @@ streamGroup->setStyleSheet("QGroupBox { border: none; margin-top: 0px; padding-t
     llmPrefixLabel->setStyleSheet("QLabel { color:#333; }");
     streamLayout->addWidget(llmPrefixLabel);
 
-    // LLM 文本（两行窗口，超出自动滚动到底部）
+    // LLM 文本（四行窗口）
     llmEdit = new QPlainTextEdit(this);
     llmEdit->setReadOnly(true);
     llmEdit->setFont(bigFont);
@@ -435,16 +436,18 @@ streamGroup->setStyleSheet("QGroupBox { border: none; margin-top: 0px; padding-t
         const int lineH = fm.lineSpacing();
         const int frame = llmEdit->frameWidth();
         const int padding = 8; // 与样式匹配的内边距
-        llmEdit->setFixedHeight(lineH * 4 + frame * 4 + padding);
+        llmEdit->setFixedHeight(lineH * 8 + frame * 8 + padding);
     }
     streamLayout->addWidget(llmEdit);
+    streamLayout->addStretch(1);
 
-    // 组装布局：去掉手动按钮与说明，仅保留表情显示与流式区域
-    mainLayout->addWidget(faceLabel, 2);
-    mainLayout->addWidget(streamGroup);
-    mainLayout->addStretch(1);
+    // 组装布局：左侧对话，右侧表情
+    root->addWidget(streamGroup, 1);
+    root->addWidget(faceLabel, 0, Qt::AlignCenter);
+    root->setStretch(0, 1);
+    root->setStretch(1, 0);
 
-    setLayout(mainLayout);
+    setLayout(root);
 }
 
 void Widget::createAnimations()
