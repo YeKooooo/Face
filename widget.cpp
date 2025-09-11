@@ -48,7 +48,7 @@ Widget::Widget(QWidget *parent)
     // 固定资源目录：与 .pro 同级的 expression_interpolations（相对路径）
     {
         const QString appDir = QCoreApplication::applicationDirPath();
-        interpolationBasePath = QDir(appDir + "/..").filePath("expression_interpolations");
+        interpolationBasePath = QDir(appDir + "/../../faceshiftDemo").filePath("expression_interpolations");
         qDebug() << "插值资源根目录(固定):" << interpolationBasePath;
     }
     
