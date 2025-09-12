@@ -33,8 +33,8 @@ Widget::Widget(QWidget *parent)
 
     , imageAnimationTimer(new QTimer(this))
     , currentImageFrame(0)
-    , interpolationBasePath("expression_interpolations")
-    , useImageSequences(true)
+    , interpolationBasePath("face")
+    , useImageSequences(false)
     , expressionDurationTimer(new QTimer(this))
     , previousExpression(ExpressionType::Neutral)
     , tcpServer(nullptr)
@@ -46,12 +46,7 @@ Widget::Widget(QWidget *parent)
     setWindowTitle("智能用药提醒机器人表情系统");
     resize(1280, 800); // 适配800x1280屏幕
     
-    // 固定资源目录：与 .pro 同级的 expression_interpolations（相对路径）
-    {
-        const QString appDir = QCoreApplication::applicationDirPath();
-        interpolationBasePath = QDir(appDir + "/../../faceshiftDemo").filePath("expression_interpolations");
-        qDebug() << "插值资源根目录(固定):" << interpolationBasePath;
-    }
+    // 插值功能已禁用，无需设置插值资源目录
     
     initializeExpressions();
     initializeExpressionParams();
@@ -61,7 +56,7 @@ Widget::Widget(QWidget *parent)
     createAnimations();
     
     // 初始化图像序列功能
-    loadImageSequences();
+    // loadImageSequences(); // 已禁用插值序列
     
     // 连接图像动画定时器
     connect(imageAnimationTimer, &QTimer::timeout, this, &Widget::onImageAnimationStep);
@@ -70,12 +65,7 @@ Widget::Widget(QWidget *parent)
     connect(expressionDurationTimer, &QTimer::timeout, this, &Widget::onExpressionDurationTimeout);
     expressionDurationTimer->setSingleShot(true);
     
-    // 程序启动时默认显示高兴表情
-    if (useImageSequences) {
-        switchToExpressionWithImages(ExpressionType::Happy);
-    } else {
-        animateToExpression(ExpressionType::Happy);
-    }
+    // 启动时不再自动切换表情，保持全屏背景图
     
     // 初始化Socket服务器
     initializeSocketServer();
@@ -165,7 +155,13 @@ void Widget::setupFaceDisplay()
     // 右侧：表情显示区域（固定800x800）
     faceLabel = new QLabel("", this);
     faceLabel->setAlignment(Qt::AlignCenter);
-    faceLabel->setStyleSheet("QLabel { background-color: #f0f0f0; border-radius: 10px; font-size: 120px; }");
+    // 载入并铺满背景图片，移除圆角及其他边框样式
+    QPixmap bgPixmap("D:/Java/faceshiftDemo/qt_face/eyes_open_nomal.png");
+    if (!bgPixmap.isNull()) {
+        faceLabel->setPixmap(bgPixmap);
+        faceLabel->setScaledContents(true);
+    }
+    faceLabel->setStyleSheet("QLabel { background-color: transparent; }");
     faceLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
     // ========== ASR/LLM 显示区域（浮动） ==========
