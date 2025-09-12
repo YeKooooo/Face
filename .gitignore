@@ -5,7 +5,7 @@ debug/
 release/
 deploy/
 build*/
-
+expression_interpolations/
 # Qt generated files
 .qmake.stash
 Makefile
