@@ -19,6 +19,7 @@
 #include <QFile>
 #include <QUrlQuery>
 #include <QHostAddress>
+#include <QSizePolicy>
 #include <QScrollBar>
 #include <QTextCursor>
 
@@ -154,298 +155,91 @@ void Widget::initializeExpressionParams()
     );
 }
 
-#if 0 // disable interpolation UI block
-void Widget::setupInterpolationUI()
-{
-    // 创建插值控制面板
-    QGroupBox* interpolationGroup = new QGroupBox("表情插值控制", this);
-    QVBoxLayout* interpolationLayout = new QVBoxLayout(interpolationGroup);
-    
-    // 表情选择
-    QHBoxLayout* expressionSelectLayout = new QHBoxLayout();
-    
-    QLabel* fromLabel = new QLabel("起始表情:");
-    fromExpressionCombo = new QComboBox();
-    QLabel* toLabel = new QLabel("目标表情:");
-    toExpressionCombo = new QComboBox();
-    
-    // 填充下拉框
-    QStringList expressionNames = {"开心", "关怀", "担忧", "鼓励", "警示", "悲伤", "中性"};
-    fromExpressionCombo->addItems(expressionNames);
-    toExpressionCombo->addItems(expressionNames);
-    toExpressionCombo->setCurrentIndex(5); // 默认选择悲伤
-    
-    expressionSelectLayout->addWidget(fromLabel);
-    expressionSelectLayout->addWidget(fromExpressionCombo);
-    expressionSelectLayout->addWidget(toLabel);
-    expressionSelectLayout->addWidget(toExpressionCombo);
-    
-    // 插值滑块
-    QHBoxLayout* sliderLayout = new QHBoxLayout();
-    QLabel* sliderLabel = new QLabel("插值比例:");
-    interpolationSlider = new QSlider(Qt::Horizontal);
-    interpolationSlider->setRange(0, 100);
-    interpolationSlider->setValue(0);
-    
-    sliderLayout->addWidget(sliderLabel);
-    sliderLayout->addWidget(interpolationSlider);
-    
-    // 模式切换（固定为图像序列模式）
-    QHBoxLayout* modeLayout = new QHBoxLayout();
-    QLabel* modeLabel = new QLabel("动画模式:");
-    toggleModeButton = new QPushButton("图像序列模式");
-    toggleModeButton->setCheckable(true);
-    toggleModeButton->setChecked(true);
-    toggleModeButton->setEnabled(false); // 禁止切换，始终使用图像序列
-    toggleModeButton->setToolTip("已固定为图像序列模式");
-    toggleModeButton->setStyleSheet(
-        "QPushButton { background-color: #e0e0e0; border: 1px solid #999; padding: 5px; }"
-        "QPushButton:checked { background-color: #4CAF50; color: white; }"
-    );
-    
-    modeLayout->addWidget(modeLabel);
-    modeLayout->addWidget(toggleModeButton);
-    modeLayout->addStretch();
-    
-    // 动画控制
-    QHBoxLayout* animationLayout = new QHBoxLayout();
-    playAnimationButton = new QPushButton("播放图像动画");
-    QLabel* speedLabel = new QLabel("速度(ms):");
-    animationSpeedSpinBox = new QSpinBox();
-    animationSpeedSpinBox->setRange(10, 1000);
-    animationSpeedSpinBox->setValue(50);
-    
-    animationLayout->addWidget(playAnimationButton);
-    animationLayout->addWidget(speedLabel);
-    animationLayout->addWidget(animationSpeedSpinBox);
-    
-    interpolationLayout->addLayout(modeLayout);
-    interpolationLayout->addLayout(expressionSelectLayout);
-    interpolationLayout->addLayout(sliderLayout);
-    interpolationLayout->addLayout(animationLayout);
-    
-    // 连接信号槽
-    connect(fromExpressionCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &Widget::onFromExpressionChanged);
-    connect(toExpressionCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &Widget::onToExpressionChanged);
-    connect(interpolationSlider, &QSlider::valueChanged,
-            this, &Widget::onInterpolationSliderChanged);
-    connect(playAnimationButton, &QPushButton::clicked,
-            this, [this]() {
-                if (useImageSequences) {
-                    playImageSequenceAnimation();
-                } else {
-                    playInterpolationAnimation();
-                }
-            });
-    // 根据图像序列可用性设置初始状态（固定图像序列）
-    toggleModeButton->setChecked(true);
-    toggleModeButton->setEnabled(false);
-    toggleModeButton->setToolTip("已固定为图像序列模式");
-    useImageSequences = true;
-    
-    // 将插值面板添加到主布局
-    QVBoxLayout* mainLayout = qobject_cast<QVBoxLayout*>(layout());
-    if (mainLayout) {
-        mainLayout->addWidget(interpolationGroup);
-    }
-}
-
-ExpressionParams Widget::interpolateExpressions(const ExpressionParams& from, 
-                                                const ExpressionParams& to, 
-                                                double t)
-{
-    // 限制t在[0,1]范围内
-    t = qBound(0.0, t, 1.0);
-    
-    // 使用平滑插值曲线（ease-in-out）
-    t = t * t * (3.0 - 2.0 * t);
-    
-    ExpressionParams result;
-    
-    // 颜色插值
-    result.backgroundColor = QColor(
-        static_cast<int>(from.backgroundColor.red() + t * (to.backgroundColor.red() - from.backgroundColor.red())),
-        static_cast<int>(from.backgroundColor.green() + t * (to.backgroundColor.green() - from.backgroundColor.green())),
-        static_cast<int>(from.backgroundColor.blue() + t * (to.backgroundColor.blue() - from.backgroundColor.blue()))
-    );
-    
-    result.textColor = QColor(
-        static_cast<int>(from.textColor.red() + t * (to.textColor.red() - from.textColor.red())),
-        static_cast<int>(from.textColor.green() + t * (to.textColor.green() - from.textColor.green())),
-        static_cast<int>(from.textColor.blue() + t * (to.textColor.blue() - from.textColor.blue()))
-    );
-    
-    // 数值插值
-    result.scale = from.scale + t * (to.scale - from.scale);
-    result.opacity = from.opacity + t * (to.opacity - from.opacity);
-    
-    // 表情符号和描述的切换（在中点切换）
-    if (t < 0.5) {
-        // 移除emoji使用，保留描述
-        result.description = from.description;
-    } else {
-        result.description = to.description;
-    }
-    
-    return result;
-}
-
-void Widget::applyExpressionParams(const ExpressionParams& params)
-{
-    if (!faceLabel) return;
-    
-    // 应用表情符号（禁用emoji显示）
-    faceLabel->setText("");
-    
-    // 应用样式
-    QString styleSheet = QString(
-        "QLabel {"
-        "    background-color: %1;"
-        "    color: %2;"
-        "    border: 3px solid %3;"
-        "    border-radius: 20px;"
-        "    font-size: %4px;"
-        "    font-weight: bold;"
-        "    padding: 20px;"
-        "    text-align: center;"
-        "}"
-    ).arg(params.backgroundColor.name())
-     .arg(params.textColor.name())
-     .arg(params.textColor.darker(150).name())
-     .arg(static_cast<int>(48 * params.scale));
-    
-    faceLabel->setStyleSheet(styleSheet);
-    
-    // 应用透明度
-    QGraphicsOpacityEffect* opacityEffect = new QGraphicsOpacityEffect();
-    opacityEffect->setOpacity(params.opacity);
-    faceLabel->setGraphicsEffect(opacityEffect);
-}
-
-void Widget::onInterpolationSliderChanged(int value)
-{
-    double t = static_cast<double>(value) / 100.0;
-    if (useImageSequences) {
-        // 使用滑块预览当前序列帧
-        QString seq = QString("%1_to_%2")
-                        .arg(expressionTypeToString(fromExpression))
-                        .arg(expressionTypeToString(toExpression));
-        if (imageSequenceCache.contains(seq) && !imageSequenceCache[seq].isEmpty()) {
-            const QList<QPixmap>& frames = imageSequenceCache[seq];
-            int idx = qBound(0, static_cast<int>(t * (frames.size() - 1)), frames.size() - 1);
-            faceLabel->setPixmap(frames[idx]);
-            return; // 仅使用图像序列
-        }
-    }
-    // 回退到参数插值（通常不会执行）
-    ExpressionParams params = interpolateExpressions(
-        expressionParams[fromExpression], 
-        expressionParams[toExpression], 
-        t
-    );
-    applyExpressionParams(params);
-}
-
-void Widget::onFromExpressionChanged(int index)
-{
-    fromExpression = static_cast<ExpressionType>(index);
-    onInterpolationSliderChanged(interpolationSlider->value());
-}
-
-void Widget::onToExpressionChanged(int index)
-{
-    toExpression = static_cast<ExpressionType>(index);
-    onInterpolationSliderChanged(interpolationSlider->value());
-}
-
-void Widget::playInterpolationAnimation()
-{
-    if (interpolationTimer->isActive()) {
-        interpolationTimer->stop();
-        playAnimationButton->setText("播放插值动画");
-        return;
-    }
-    
-    interpolationStep = 0;
-    maxInterpolationSteps = 100; // 100步插值
-    interpolationTimer->setInterval(animationSpeedSpinBox->value());
-    interpolationTimer->start();
-    playAnimationButton->setText("停止动画");
-}
-#endif // disable interpolation UI block
 void Widget::setupFaceDisplay()
 {
-    // 根布局：左右分栏
-    QHBoxLayout *root = new QHBoxLayout(this);
+    // 根布局：单元格叠放，文本浮动于表情底部
+    QGridLayout *root = new QGridLayout(this);
+    root->setContentsMargins(0, 0, 0, 0);
+    root->setSpacing(0);
 
     // 右侧：表情显示区域（固定800x800）
     faceLabel = new QLabel("", this);
     faceLabel->setAlignment(Qt::AlignCenter);
     faceLabel->setStyleSheet("QLabel { background-color: #f0f0f0; border-radius: 10px; font-size: 120px; }");
-    faceLabel->setFixedSize(800, 800);
+    faceLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
-    // ========== 左侧：ASR/LLM 显示区域 ==========
+    // ========== ASR/LLM 显示区域（浮动） ==========
     QGroupBox* streamGroup = new QGroupBox(this);
     streamGroup->setTitle(QString());
-    streamGroup->setStyleSheet("QGroupBox { border: none; margin-top: 0px; padding-top: 0px; }");
+    streamGroup->setStyleSheet("QGroupBox { background: transparent; border: none; margin: 0px; padding: 0px; }");
+    streamGroup->setAttribute(Qt::WA_TranslucentBackground);
     QVBoxLayout* streamLayout = new QVBoxLayout(streamGroup);
 
     // 统一放大字体，适配1280x800
     QFont bigFont = this->font();
     bigFont.setPointSize(18);
 
-    // ASR 前缀（固定前缀：用户：）
+    // ASR 前缀+文本框一行布局
     asrLabel = new QLabel("用户：", this);
     asrLabel->setFont(bigFont);
-    asrLabel->setStyleSheet("QLabel { color:#333; }");
-    streamLayout->addWidget(asrLabel);
+    asrLabel->setStyleSheet("QLabel { color:#ffffff; }");
 
-    // ASR 文本框（两行窗口）
     asrEdit = new QPlainTextEdit(this);
     asrEdit->setReadOnly(true);
     asrEdit->setFont(bigFont);
     asrEdit->setLineWrapMode(QPlainTextEdit::WidgetWidth);
-    asrEdit->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    asrEdit->setStyleSheet("QPlainTextEdit { background:#fafafa; border:1px solid #ddd; border-radius:6px; padding:6px; }");
+    asrEdit->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    asrEdit->setStyleSheet("QPlainTextEdit { background: #228B22; border: none; padding: 4px; color: #ffffff; }");
     {
         QFontMetrics fm(asrEdit->font());
         const int lineH = fm.lineSpacing();
         const int frame = asrEdit->frameWidth();
-        const int padding = 8;
-        asrEdit->setFixedHeight(lineH * 5 + frame * 5 + padding);
+        const int padding = 4;
+        asrEdit->setFixedHeight(lineH + frame * 2 + padding);
     }
-    streamLayout->addWidget(asrEdit);
+    asrEdit->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-    // LLM 前缀（固定前缀：机器人：）
+    QHBoxLayout* asrRow = new QHBoxLayout();
+    asrRow->setContentsMargins(0,0,0,0);
+    asrRow->setSpacing(6);
+    // 标签顶部对齐，保持与文本框首行对齐
+    asrRow->addWidget(asrLabel, 0, Qt::AlignTop);
+    asrRow->addWidget(asrEdit, 1);
+    streamLayout->addLayout(asrRow);
+
+    // LLM 前缀+文本框三行布局
     llmPrefixLabel = new QLabel("机器人：", this);
     llmPrefixLabel->setFont(bigFont);
-    llmPrefixLabel->setStyleSheet("QLabel { color:#333; }");
-    streamLayout->addWidget(llmPrefixLabel);
+    llmPrefixLabel->setStyleSheet("QLabel { color:#ffffff; }");
 
-    // LLM 文本（四行窗口）
     llmEdit = new QPlainTextEdit(this);
     llmEdit->setReadOnly(true);
     llmEdit->setFont(bigFont);
     llmEdit->setLineWrapMode(QPlainTextEdit::WidgetWidth);
     llmEdit->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    llmEdit->setStyleSheet("QPlainTextEdit { background:#f7fbff; border:1px solid #cfe8ff; border-radius:6px; padding:6px; }");
+    llmEdit->setStyleSheet("QPlainTextEdit { background: #228B22; border: none; padding: 4px; color: #ffffff; }");
     {
         QFontMetrics fm(llmEdit->font());
         const int lineH = fm.lineSpacing();
         const int frame = llmEdit->frameWidth();
-        const int padding = 8; // 与样式匹配的内边距
-        llmEdit->setFixedHeight(lineH * 8 + frame * 8 + padding);
+        const int padding = 4; // 与样式匹配的内边距
+        llmEdit->setFixedHeight(lineH * 3 + frame * 3 + padding);
     }
-    streamLayout->addWidget(llmEdit);
+    llmEdit->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+    QHBoxLayout* llmRow = new QHBoxLayout();
+    llmRow->setContentsMargins(0,0,0,0);
+    llmRow->setSpacing(6);
+    // 标签顶部对齐，保持与文本框首行对齐
+    llmRow->addWidget(llmPrefixLabel, 0, Qt::AlignTop);
+    llmRow->addWidget(llmEdit,1);
+    streamLayout->addLayout(llmRow);
     streamLayout->addStretch(1);
 
-    // 组装布局：左侧对话，右侧表情
-    root->addWidget(streamGroup, 1);
-    root->addWidget(faceLabel, 0, Qt::AlignCenter);
-    root->setStretch(0, 1);
-    root->setStretch(1, 0);
+    // 组装布局：faceLabel 占满，streamGroup 同单元格底对齐
+    // 让流式对话区域宽度充满底部，并保持底部对齐
+    root->addWidget(faceLabel, 0, 0);
+    root->addWidget(streamGroup, 0, 0, Qt::AlignBottom);
 
     setLayout(root);
 }
@@ -1098,163 +892,6 @@ QString Widget::getLocalIPAddress()
     }
     return QHostAddress(QHostAddress::LocalHost).toString();
 }
-
-#if 0 // disable Socket server UI block
-void Widget::setupSocketServerUI()
-{
-    // 创建Socket服务器控制面板
-    QGroupBox* socketGroup = new QGroupBox("Socket服务器控制", this);
-    QVBoxLayout* socketLayout = new QVBoxLayout(socketGroup);
-    
-    // 服务器状态显示
-    QHBoxLayout* statusLayout = new QHBoxLayout();
-    QLabel* statusTitleLabel = new QLabel("服务器状态:");
-    serverStatusLabel = new QLabel("未启动");
-    serverStatusLabel->setStyleSheet("color: red; font-weight: bold;");
-    
-    statusLayout->addWidget(statusTitleLabel);
-    statusLayout->addWidget(serverStatusLabel);
-    statusLayout->addStretch();
-    
-    // IP地址显示
-    QHBoxLayout* ipLayout = new QHBoxLayout();
-    QLabel* ipTitleLabel = new QLabel("监听地址:");
-    ipAddressLabel = new QLabel("未启动");
-    ipAddressLabel->setStyleSheet("color: #666; font-family: monospace;");
-    
-    ipLayout->addWidget(ipTitleLabel);
-    ipLayout->addWidget(ipAddressLabel);
-    ipLayout->addStretch();
-    
-    // 客户端连接数显示
-    QHBoxLayout* clientLayout = new QHBoxLayout();
-    QLabel* clientTitleLabel = new QLabel("连接数:");
-    clientCountLabel = new QLabel("0");
-    clientCountLabel->setStyleSheet("color: #333; font-weight: bold;");
-    
-    clientLayout->addWidget(clientTitleLabel);
-    clientLayout->addWidget(clientCountLabel);
-    clientLayout->addStretch();
-    
-    // 端口设置
-    QHBoxLayout* portLayout = new QHBoxLayout();
-    QLabel* portLabel = new QLabel("端口:");
-    portSpinBox = new QSpinBox();
-    portSpinBox->setRange(1024, 65535);
-    portSpinBox->setValue(serverPort);
-    portSpinBox->setToolTip("设置Socket服务器监听端口");
-    
-    portLayout->addWidget(portLabel);
-    portLayout->addWidget(portSpinBox);
-    portLayout->addStretch();
-    
-    // 控制按钮
-    QHBoxLayout* buttonLayout = new QHBoxLayout();
-    startServerButton = new QPushButton("启动服务器");
-    stopServerButton = new QPushButton("停止服务器");
-    
-    startServerButton->setStyleSheet(
-        "QPushButton { background-color: #4CAF50; color: white; font-weight: bold; padding: 8px; }"
-        "QPushButton:hover { background-color: #45a049; }"
-        "QPushButton:disabled { background-color: #cccccc; color: #666666; }"
-    );
-    
-    stopServerButton->setStyleSheet(
-        "QPushButton { background-color: #f44336; color: white; font-weight: bold; padding: 8px; }"
-        "QPushButton:hover { background-color: #da190b; }"
-        "QPushButton:disabled { background-color: #cccccc; color: #666666; }"
-    );
-    
-    buttonLayout->addWidget(startServerButton);
-    buttonLayout->addWidget(stopServerButton);
-    
-    // 添加所有布局到主面板
-    socketLayout->addLayout(statusLayout);
-    socketLayout->addLayout(ipLayout);
-    socketLayout->addLayout(clientLayout);
-    socketLayout->addLayout(portLayout);
-    socketLayout->addLayout(buttonLayout);
-    
-    // 连接信号槽
-    connect(startServerButton, &QPushButton::clicked, this, &Widget::onStartServerClicked);
-    connect(stopServerButton, &QPushButton::clicked, this, &Widget::onStopServerClicked);
-    connect(portSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), this, &Widget::onPortChanged);
-    
-    // 初始化UI状态
-    updateServerStatus();
-    updateClientCount();
-    
-    // 将Socket面板添加到主布局
-    QVBoxLayout* mainLayout = qobject_cast<QVBoxLayout*>(layout());
-    if (mainLayout) {
-        mainLayout->addWidget(socketGroup);
-    }
-}
-
-void Widget::updateServerStatus()
-{
-    // 当未创建Socket服务器控制UI时，直接返回，避免空指针
-    if (!serverStatusLabel || !ipAddressLabel || !startServerButton || !stopServerButton || !portSpinBox) {
-        return;
-    }
-    if (isServerRunning) {
-        serverStatusLabel->setText("运行中");
-        serverStatusLabel->setStyleSheet("color: green; font-weight: bold;");
-        QString localIP = getLocalIPAddress();
-        ipAddressLabel->setText(QString("%1:%2").arg(localIP).arg(serverPort));
-        ipAddressLabel->setStyleSheet("color: #333; font-family: monospace; font-weight: bold;");
-        startServerButton->setEnabled(false);
-        stopServerButton->setEnabled(true);
-        portSpinBox->setEnabled(false);
-    } else {
-        serverStatusLabel->setText("未启动");
-        serverStatusLabel->setStyleSheet("color: red; font-weight: bold;");
-        ipAddressLabel->setText("未启动");
-        ipAddressLabel->setStyleSheet("color: #666; font-family: monospace;");
-        startServerButton->setEnabled(true);
-        stopServerButton->setEnabled(false);
-        portSpinBox->setEnabled(true);
-    }
-}
-
-void Widget::updateClientCount()
-{
-    // 当未创建Socket服务器控制UI时，直接返回，避免空指针
-    if (!clientCountLabel) {
-        return;
-    }
-    int count = clientSockets.size();
-    clientCountLabel->setText(QString::number(count));
-    if (count > 0) {
-        clientCountLabel->setStyleSheet("color: #4CAF50; font-weight: bold;");
-    } else {
-        clientCountLabel->setStyleSheet("color: #333; font-weight: bold;");
-    }
-}
-
-void Widget::onStartServerClicked()
-{
-    quint16 port = static_cast<quint16>(portSpinBox->value());
-    startSocketServer(port);
-    updateServerStatus();
-}
-
-void Widget::onStopServerClicked()
-{
-    stopSocketServer();
-    updateServerStatus();
-    updateClientCount();
-}
-
-void Widget::onPortChanged(int port)
-{
-    if (!isServerRunning) {
-        serverPort = static_cast<quint16>(port);
-    }
-}
-#endif // disable Socket server UI block
-
-
 
 // =================== 新增：HTTP流式方法与显示逻辑 ===================
 void Widget::startNerStreamJson(const QUrl& baseUrl, const QString& memoryId, const QString& text)
