@@ -22,6 +22,7 @@
 #include <QSizePolicy>
 #include <QScrollBar>
 #include <QTextCursor>
+#include <QRandomGenerator> // 新增：用于随机眨眼
 
 Widget::Widget(QWidget *parent)
     : QWidget(parent)
@@ -151,18 +152,28 @@ void Widget::setupFaceDisplay()
     QGridLayout *root = new QGridLayout(this);
     root->setContentsMargins(0, 0, 0, 0);
     root->setSpacing(0);
-
-    // 右侧：表情显示区域（固定800x800）
     faceLabel = new QLabel("", this);
     faceLabel->setAlignment(Qt::AlignCenter);
-    // 载入并铺满背景图片，移除圆角及其他边框样式
-    QPixmap bgPixmap("D:/Java/faceshiftDemo/qt_face/eyes_open_nomal.png");
+    QPixmap bgPixmap("D:/Java/faceshiftDemo/qt_face/normal.png");
     if (!bgPixmap.isNull()) {
         faceLabel->setPixmap(bgPixmap);
         faceLabel->setScaledContents(true);
     }
     faceLabel->setStyleSheet("QLabel { background-color: transparent; }");
     faceLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+    // ======== 眨眼资源加载 ========
+    openPixmap = QPixmap("D:/Java/faceshiftDemo/qt_face/normal.png");
+    transitionPixmap = QPixmap("D:/Java/faceshiftDemo/qt_face/transition.png");
+    closedPixmap = QPixmap("D:/Java/faceshiftDemo/qt_face/closed.png");
+
+    // 初始化眨眼定时器
+    blinkTimer = new QTimer(this);
+    blinkTimer->setSingleShot(true);
+    connect(blinkTimer, &QTimer::timeout, this, &Widget::onBlinkTimeout);
+
+    // 启动首次随机眨眼
+    blinkTimer->start(QRandomGenerator::global()->bounded(5000, 10001));
 
     // ========== ASR/LLM 显示区域（浮动） ==========
     QGroupBox* streamGroup = new QGroupBox(this);
@@ -185,22 +196,26 @@ void Widget::setupFaceDisplay()
     asrEdit->setFont(bigFont);
     asrEdit->setLineWrapMode(QPlainTextEdit::WidgetWidth);
     asrEdit->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    asrEdit->setStyleSheet("QPlainTextEdit { background: #228B22; border: none; padding: 4px; color: #ffffff; }");
+    asrEdit->setStyleSheet("QPlainTextEdit { background: transparent; border: none; padding: 0px; color: #ffffff; }");
     {
         QFontMetrics fm(asrEdit->font());
         const int lineH = fm.lineSpacing();
         const int frame = asrEdit->frameWidth();
-        const int padding = 4;
-        asrEdit->setFixedHeight(lineH + frame * 2 + padding);
+        const int padding = 0;
+        const int extra = 4; // 额外高度，让单行框稍高一点，避免文字贴边
+        asrEdit->setFixedHeight(lineH + frame * 2 + padding + extra);
     }
     asrEdit->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
+    // 显示固定文本
+    asrEdit->setPlainText(QStringLiteral("今天我有没有吃999感冒灵？我有点感冒"));
+
     QHBoxLayout* asrRow = new QHBoxLayout();
     asrRow->setContentsMargins(0,0,0,0);
-    asrRow->setSpacing(6);
+    asrRow->setSpacing(0);
     // 标签顶部对齐，保持与文本框首行对齐
     asrRow->addWidget(asrLabel, 0, Qt::AlignTop);
-    asrRow->addWidget(asrEdit, 1);
+    asrRow->addWidget(asrEdit, 1, Qt::AlignTop);
     streamLayout->addLayout(asrRow);
 
     // LLM 前缀+文本框三行布局
@@ -213,22 +228,25 @@ void Widget::setupFaceDisplay()
     llmEdit->setFont(bigFont);
     llmEdit->setLineWrapMode(QPlainTextEdit::WidgetWidth);
     llmEdit->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    llmEdit->setStyleSheet("QPlainTextEdit { background: #228B22; border: none; padding: 4px; color: #ffffff; }");
+    llmEdit->setStyleSheet("QPlainTextEdit { background: transparent; border: none; padding: 0px; color: #ffffff; }");
     {
         QFontMetrics fm(llmEdit->font());
         const int lineH = fm.lineSpacing();
         const int frame = llmEdit->frameWidth();
-        const int padding = 4; // 与样式匹配的内边距
+        const int padding = 0; 
         llmEdit->setFixedHeight(lineH * 3 + frame * 3 + padding);
     }
     llmEdit->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+    // 显示固定文本
+    llmEdit->setPlainText(QStringLiteral("根据现有资料，阿司匹林与999感冒灵不建议同时服用，主要原因包括以下几点：\n阿司匹林是一种非甾体抗炎药（NSAID），而999感冒灵中含有对乙酰氨基酚（扑热息痛），两者均为解热镇痛药。若同时使用，可能导致同类药物过量，加重肝脏和肾脏的代谢负担，甚至引发肝损伤或肾毒性。\n副作用叠加，胃肠道和中枢神经系统风险增加\n阿司匹林对胃黏膜有刺激作用，可能引起胃痛、胃溃疡甚至出血；而999感冒灵中的马来酸氯苯那敏（一种抗组胺药）可能引起嗜睡、口干等中枢抑制反应。两者合用可能放大副作用，尤其对老年人或有基础疾病者不利。"));
 
     QHBoxLayout* llmRow = new QHBoxLayout();
     llmRow->setContentsMargins(0,0,0,0);
     llmRow->setSpacing(6);
     // 标签顶部对齐，保持与文本框首行对齐
     llmRow->addWidget(llmPrefixLabel, 0, Qt::AlignTop);
-    llmRow->addWidget(llmEdit,1);
+    llmRow->addWidget(llmEdit,1, Qt::AlignTop);
     streamLayout->addLayout(llmRow);
     streamLayout->addStretch(1);
 
@@ -399,194 +417,18 @@ QString Widget::getSequencePath(ExpressionType from, ExpressionType to)
 
 void Widget::loadImageSequences()
 {
-    QDir baseDir(interpolationBasePath);
-    if (!baseDir.exists()) {
-        qDebug() << "插值图像目录不存在:" << interpolationBasePath;
-        useImageSequences = false;
-        return;
-    }
-    
-    qDebug() << "开始加载图像序列...";
-    
-    // 获取所有表情类型
-    QList<ExpressionType> expressions = {
-        ExpressionType::Happy, ExpressionType::Caring, ExpressionType::Concerned,
-        ExpressionType::Encouraging, ExpressionType::Alert, ExpressionType::Sad,
-        ExpressionType::Neutral
-    };
-    
-    int loadedSequences = 0;
-    
-    // 预加载所有表情对的图像序列
-    for (ExpressionType from : expressions) {
-        for (ExpressionType to : expressions) {
-            if (from != to) {
-                QString sequenceName = QString("%1_to_%2")
-                    .arg(expressionTypeToString(from))
-                    .arg(expressionTypeToString(to));
-                
-                preloadImageSequence(sequenceName);
-                if (imageSequenceCache.contains(sequenceName)) {
-                    loadedSequences++;
-                }
-            }
-        }
-    }
-    
-    useImageSequences = (loadedSequences > 0);
-    qDebug() << QString("加载完成，共加载 %1 个图像序列").arg(loadedSequences);
-    
-    if (useImageSequences) {
-        qDebug() << "图像序列模式已启用";
-    } else {
-        qDebug() << "图像序列模式未启用，将使用参数插值模式";
-    }
+    // 图像序列功能已移除
 }
 
-void Widget::preloadImageSequence(const QString& sequenceName)
-{
-    QString sequencePath = QString("%1/%2").arg(interpolationBasePath, sequenceName);
-    QDir sequenceDir(sequencePath);
-    
-    if (!sequenceDir.exists()) {
-        return;
-    }
-    
-    // 获取所有PNG文件并按名称排序
-    QStringList filters;
-    filters << "frame_*.png";
-    QStringList imageFiles = sequenceDir.entryList(filters, QDir::Files, QDir::Name);
-    
-    if (imageFiles.isEmpty()) {
-        return;
-    }
-    
-    QList<QPixmap> pixmaps;
-    for (const QString& fileName : imageFiles) {
-        QString fullPath = sequenceDir.absoluteFilePath(fileName);
-        QPixmap pixmap(fullPath);
-        
-        if (!pixmap.isNull()) {
-            // 缩放到800x800，从原来400x400放大一倍
-            pixmap = pixmap.scaled(600, 600, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-            pixmaps.append(pixmap);
-        }
-    }
-    
-    if (!pixmaps.isEmpty()) {
-        imageSequenceCache[sequenceName] = pixmaps;
-        qDebug() << QString("预加载序列 %1: %2 帧").arg(sequenceName).arg(pixmaps.size());
-    }
-}
-
-void Widget::switchToExpressionWithImages(ExpressionType targetType)
-{
-    if (!useImageSequences || isAnimating) {
-        return;
-    }
-    
-    // 设置动画的起始和目标表情
-    fromExpression = currentExpression;
-    toExpression = targetType;
-    
-    QString sequenceName = QString("%1_to_%2")
-        .arg(expressionTypeToString(fromExpression))
-        .arg(expressionTypeToString(toExpression));
-    
-    qDebug() << QString("尝试播放序列: %1 (从 %2 到 %3)")
-        .arg(sequenceName)
-        .arg(expressionTypeToString(fromExpression))
-        .arg(expressionTypeToString(toExpression));
-    
-    if (!imageSequenceCache.contains(sequenceName)) {
-        qDebug() << "未找到图像序列:" << sequenceName;
-        qDebug() << "可用序列:" << imageSequenceCache.keys();
-        // 不再回退到emoji动画：选择一个最佳可用的静态帧进行显示
-        QString seqNeutral = QString("Neutral_to_%1").arg(expressionTypeToString(targetType));
-        if (imageSequenceCache.contains(seqNeutral) && !imageSequenceCache[seqNeutral].isEmpty()) {
-            faceLabel->setText("");
-            faceLabel->setPixmap(imageSequenceCache[seqNeutral].last());
-            currentExpression = targetType;
-        } else {
-            // 若无可用序列，保持当前图像，仅更新状态，确保不显示emoji
-            faceLabel->setText("");
-            currentExpression = targetType;
-        }
-        return;
-    }
-    
-    isAnimating = true;
-    currentImageFrame = 0;
-    
-    // 停止其他动画（仅停止已有的表达式动画组）
-    if (expressionAnimation && expressionAnimation->state() == QAbstractAnimation::Running) {
-        expressionAnimation->stop();
-    }
-    
-    // 开始图像序列动画，使用内部配置的间隔
-    int interval = imageAnimationIntervalMs;
-    imageAnimationTimer->start(interval);
-    
-    qDebug() << QString("开始播放图像序列: %1 (%2 帧), 间隔: %3ms")
-        .arg(sequenceName)
-        .arg(imageSequenceCache[sequenceName].size())
-        .arg(interval);
-}
 
 void Widget::onImageAnimationStep()
 {
-    // 构建当前正在播放的序列名称
-    QString activeSequence = QString("%1_to_%2")
-        .arg(expressionTypeToString(fromExpression))
-        .arg(expressionTypeToString(toExpression));
-    
-    if (!imageSequenceCache.contains(activeSequence)) {
-        qDebug() << "未找到活动序列:" << activeSequence;
-        imageAnimationTimer->stop();
-        isAnimating = false;
-        return;
-    }
-    
-    const QList<QPixmap>& frames = imageSequenceCache[activeSequence];
-    
-    if (currentImageFrame < frames.size()) {
-        // 显示当前帧
-        faceLabel->setPixmap(frames[currentImageFrame]);
-        currentImageFrame++;
-        
-        qDebug() << QString("播放帧 %1/%2 - 序列: %3")
-            .arg(currentImageFrame)
-            .arg(frames.size())
-            .arg(activeSequence);
-    } else {
-        // 动画完成
-        imageAnimationTimer->stop();
-        isAnimating = false;
-        currentImageFrame = 0;
-        
-        // 更新当前表情状态为目标表情
-        currentExpression = toExpression;
-        // playAnimationButton->setText("播放图像动画"); // 移除UI按钮依赖
-        
-        qDebug() << "图像序列动画完成，当前表情:" << expressionTypeToString(currentExpression);
-    }
+    // 图像序列动画已移除
 }
 
 void Widget::playImageSequenceAnimation()
 {
-    // 始终使用图像序列模式，不再回退插值
-    if (imageAnimationTimer->isActive()) {
-        imageAnimationTimer->stop();
-        isAnimating = false;
-        // playAnimationButton->setText("播放图像动画"); // 移除UI按钮依赖
-        return;
-    }
-    
-    // 设置播放间隔
-    imageAnimationTimer->setInterval(imageAnimationIntervalMs);
-    // 按当前起始/目标表情播放
-    switchToExpressionWithImages(toExpression);
-    // playAnimationButton->setText("停止动画"); // 移除UI按钮依赖
+    // 功能已移除
 }
 
 // EmotionOutput接口实现
@@ -1071,5 +913,41 @@ void Widget::updateAsrText(const QString& text, bool isFinal)
     Q_UNUSED(isFinal);
     // 框内仅显示内容，前缀在框上一行标签中
     asrEdit->setPlainText(text);
+}
+
+// ==================== 兼容占位：已移除图像序列功能 ====================
+void Widget::switchToExpressionWithImages(ExpressionType targetType)
+{
+    // 图像序列功能已废弃，直接回退到参数插值实现
+    animateToExpression(targetType);
+}
+
+void Widget::blinkOnce()
+{
+    // 在0.5秒内切换三帧
+    if (transitionPixmap.isNull() || closedPixmap.isNull()) {
+        return; // 资源缺失
+    }
+
+    // 使用局部单次定时器链式播放
+    faceLabel->setPixmap(transitionPixmap);
+    QTimer::singleShot(100, this, [this]() {
+        faceLabel->setPixmap(closedPixmap);
+        QTimer::singleShot(100, this, [this]() {
+            faceLabel->setPixmap(transitionPixmap);
+            QTimer::singleShot(100, this, [this]() {
+                faceLabel->setPixmap(openPixmap);
+                // 重新启动随机眨眼
+                blinkTimer->start(QRandomGenerator::global()->bounded(5000, 10001));
+            });
+        });
+    });
+}
+
+void Widget::onBlinkTimeout()
+{
+    blinkOnce();
+    // 重新启动随机定时器
+    blinkTimer->start(QRandomGenerator::global()->bounded(5000, 10001));
 }
 

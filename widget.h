@@ -119,6 +119,11 @@ private Q_SLOTS:
     void onNerError(QNetworkReply::NetworkError code);
     void updateAsrText(const QString& text, bool isFinal);
 
+    // 眨眼动画（仅播放，不负责重新定时）
+    void blinkOnce();
+    // 眨眼定时器触发槽：播放后重新定时
+    void onBlinkTimeout();
+
 private:
     void setupFaceDisplay();
     void createAnimations();
@@ -198,6 +203,12 @@ private:
     QList<QTcpSocket*> clientSockets;
     quint16 serverPort;
     bool isServerRunning;
+
+    // 眨眼相关成员
+    QTimer* blinkTimer;
+    QPixmap openPixmap;
+    QPixmap transitionPixmap;
+    QPixmap closedPixmap;
     
     // 移除Socket服务器UI控件
     // QPushButton* startServerButton = nullptr;
