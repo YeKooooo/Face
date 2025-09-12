@@ -33,13 +33,11 @@ QT_END_NAMESPACE
 
 // 表情类型枚举
 enum class ExpressionType {
+    Normal,     // 默认/普通
     Happy,      // 开心
-    Caring,     // 关怀
-    Concerned,  // 担忧
-    Encouraging,// 鼓励
-    Alert,      // 警觉
     Sad,        // 难过
-    Neutral     // 中性
+    Warning,    // 警示
+    Sleep       // 休眠模式
 };
 
 struct ExpressionParams {
@@ -130,14 +128,6 @@ private:
     void animateToExpression(ExpressionType type);
     void initializeExpressions();
     void cleanupAnimations();
-    // 删除未用插值UI/算法声明
-    // void setupInterpolationUI();
-    void initializeExpressionParams();
-    // ExpressionParams interpolateExpressions(const ExpressionParams& from, 
-    //                                       const ExpressionParams& to, 
-    //                                       double t);
-    // void applyExpressionParams(const ExpressionParams& params);
-    
     // 图像序列相关函数
     void loadImageSequences();
     void preloadImageSequence(const QString& sequenceName);
@@ -147,6 +137,8 @@ private:
     void switchToExpressionWithImages(ExpressionType targetType);
     EmotionOutput parseEmotionOutputJson(const QString& jsonString);
     void logEmotionTrigger(const QString& reason, ExpressionType type);
+    // 根据表达类型设置背景
+    void setExpressionBackground(ExpressionType type);
 
     // 更新LLM文本显示（仅保留1-2行可见，超出出现滚动条并自动滚动）
     void updateLlmDisplay();
@@ -206,6 +198,7 @@ private:
 
     // 眨眼相关成员
     QTimer* blinkTimer;
+    QTimer* idleTimer; // 新增：空闲定时器，用于20秒无输入时切换至休眠
     QPixmap openPixmap;
     QPixmap transitionPixmap;
     QPixmap closedPixmap;
@@ -255,5 +248,7 @@ private Q_SLOTS:
     // void onStartServerClicked();
     // void onStopServerClicked();
     // void onPortChanged(int port);
+    void onIdleTimeout();
+    void resetIdleTimer();
 };
 #endif // WIDGET_H

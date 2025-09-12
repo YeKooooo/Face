@@ -27,7 +27,7 @@
 Widget::Widget(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::Widget)
-    , currentExpression(ExpressionType::Neutral)
+    , currentExpression(ExpressionType::Normal)
     , isAnimating(false)
     , fromExpression(ExpressionType::Happy)
     , toExpression(ExpressionType::Sad)
@@ -37,7 +37,7 @@ Widget::Widget(QWidget *parent)
     , interpolationBasePath("face")
     , useImageSequences(false)
     , expressionDurationTimer(new QTimer(this))
-    , previousExpression(ExpressionType::Neutral)
+    , previousExpression(ExpressionType::Normal)
     , tcpServer(nullptr)
     , serverPort(8888)
     , isServerRunning(false)
@@ -50,11 +50,10 @@ Widget::Widget(QWidget *parent)
     // 插值功能已禁用，无需设置插值资源目录
     
     initializeExpressions();
-    initializeExpressionParams();
     setupFaceDisplay();
     // setupInterpolationUI(); // 按用户要求隐藏插值控制区域
     // setupSocketServerUI();  // 按用户要求隐藏Socket服务器控制区域
-    createAnimations();
+    // createAnimations(); // 动画已移除
     
     // 初始化图像序列功能
     // loadImageSequences(); // 已禁用插值序列
@@ -67,6 +66,13 @@ Widget::Widget(QWidget *parent)
     expressionDurationTimer->setSingleShot(true);
     
     // 启动时不再自动切换表情，保持全屏背景图
+    
+    // ======== 新增：空闲定时器 ========
+    idleTimer = new QTimer(this);
+    idleTimer->setInterval(20000); // 20秒
+    idleTimer->setSingleShot(true);
+    connect(idleTimer, &QTimer::timeout, this, &Widget::onIdleTimeout);
+    idleTimer->start();
     
     // 初始化Socket服务器
     initializeSocketServer();
@@ -103,12 +109,9 @@ void Widget::initializeExpressions()
 {
     // 初始化表情数据
     expressions[ExpressionType::Happy] = {"😊", "开心", "#FFD700", "成功完成用药、健康状况良好"};
-    expressions[ExpressionType::Caring] = {"🤗", "关怀", "#4CAF50", "用药提醒、健康关怀"};
-    expressions[ExpressionType::Concerned] = {"😟", "担忧", "#FF9800", "延迟用药、健康指标异常"};
-    expressions[ExpressionType::Encouraging] = {"💪", "鼓励", "#2196F3", "激励坚持治疗、克服困难"};
-    expressions[ExpressionType::Alert] = {"⚠️", "警觉", "#FF6B6B", "紧急情况、重要提醒"};
+    expressions[ExpressionType::Warning] = {"⚠️", "警示", "#FF6B6B", "紧急情况、重要提醒"};
     expressions[ExpressionType::Sad] = {"😢", "难过", "#607D8B", "身体不适、治疗效果不佳"};
-    expressions[ExpressionType::Neutral] = {"😐", "中性", "#9E9E9E", "默认状态、日常交互"};
+    expressions[ExpressionType::Normal] = {"😐", "普通", "#9E9E9E", "默认状态、日常交互"};
 }
 
 void Widget::cleanupAnimations()
@@ -118,32 +121,6 @@ void Widget::cleanupAnimations()
         expressionAnimation->clear();
         expressionAnimation = nullptr;
     }
-}
-
-void Widget::initializeExpressionParams()
-{
-    // 为每种表情定义可插值的参数
-    expressionParams[ExpressionType::Happy] = ExpressionParams(
-        QColor(144, 238, 144), QColor(0, 100, 0), 1.2, 1.0, "😊", "开心"
-    );
-    expressionParams[ExpressionType::Caring] = ExpressionParams(
-        QColor(255, 182, 193), QColor(139, 69, 19), 1.1, 0.9, "🤗", "关怀"
-    );
-    expressionParams[ExpressionType::Concerned] = ExpressionParams(
-        QColor(255, 165, 0), QColor(139, 69, 19), 0.9, 0.8, "😟", "担忧"
-    );
-    expressionParams[ExpressionType::Encouraging] = ExpressionParams(
-        QColor(173, 216, 230), QColor(25, 25, 112), 1.3, 1.0, "💪", "鼓励"
-    );
-    expressionParams[ExpressionType::Alert] = ExpressionParams(
-        QColor(255, 99, 71), QColor(139, 0, 0), 1.1, 1.0, "⚠️", "警示"
-    );
-    expressionParams[ExpressionType::Sad] = ExpressionParams(
-        QColor(169, 169, 169), QColor(105, 105, 105), 0.8, 0.7, "😢", "悲伤"
-    );
-    expressionParams[ExpressionType::Neutral] = ExpressionParams(
-        QColor(211, 211, 211), QColor(105, 105, 105), 1.0, 0.8, "😐", "中性"
-    );
 }
 
 void Widget::setupFaceDisplay()
@@ -397,14 +374,12 @@ void Widget::onAnimationFinished()
 QString Widget::expressionTypeToString(ExpressionType type)
 {
     switch (type) {
-        case ExpressionType::Happy: return "Happy";
-        case ExpressionType::Caring: return "Caring";
-        case ExpressionType::Concerned: return "Concerned";
-        case ExpressionType::Encouraging: return "Encouraging";
-        case ExpressionType::Alert: return "Alert";
-        case ExpressionType::Sad: return "Sad";
-        case ExpressionType::Neutral: return "Neutral";
-        default: return "Neutral";
+        case ExpressionType::Happy:    return "Happy";
+        case ExpressionType::Sad:      return "Sad";
+        case ExpressionType::Warning:  return "Warning";
+        case ExpressionType::Sleep:    return "Sleep";
+        case ExpressionType::Normal:   return "Normal";
+        default:                       return "Normal";
     }
 }
 
@@ -429,6 +404,23 @@ void Widget::onImageAnimationStep()
 void Widget::playImageSequenceAnimation()
 {
     // 功能已移除
+}
+
+// ========= 新增：根据表达类型设置背景 =========
+void Widget::setExpressionBackground(ExpressionType type)
+{
+    QString path;
+    switch(type){
+        case ExpressionType::Happy:    path = "D:/Java/faceshiftDemo/qt_face/emotion_happy.png"; break;
+        case ExpressionType::Sad:      path = "D:/Java/faceshiftDemo/qt_face/emotion_sad.png"; break;
+        case ExpressionType::Warning:  path = "D:/Java/faceshiftDemo/qt_face/emotion_warning.png"; break;
+        case ExpressionType::Sleep:    path = "D:/Java/faceshiftDemo/qt_face/sleep.png"; break;
+        default: /* Normal */          path = "D:/Java/faceshiftDemo/qt_face/normal.png"; break;
+    }
+    QPixmap pix(path);
+    if(!pix.isNull()){
+        faceLabel->setPixmap(pix);
+    }
 }
 
 // EmotionOutput接口实现
@@ -460,11 +452,17 @@ void Widget::processEmotionOutput(const EmotionOutput& emotionData)
     currentEmotionOutput = emotionData;
     
     // 切换到目标表情
+    blinkOnce();
+    setExpressionBackground(targetType);
+    // 重新计时空闲定时器
+    resetIdleTimer();
+    /*
     if (useImageSequences) {
         switchToExpressionWithImages(targetType);
     } else {
         animateToExpression(targetType);
     }
+    */
     
     // 设置持续时间（如果不是永久状态）
     if (emotionData.duration_ms > 0) {
@@ -509,25 +507,12 @@ EmotionOutput Widget::parseEmotionOutputJson(const QString& jsonString)
 ExpressionType Widget::stringToExpressionType(const QString& typeString)
 {
     QString lowerType = typeString.toLower();
-    
-    if (lowerType == "happy" || lowerType == "开心") {
-        return ExpressionType::Happy;
-    } else if (lowerType == "caring" || lowerType == "关怀") {
-        return ExpressionType::Caring;
-    } else if (lowerType == "concerned" || lowerType == "担忧") {
-        return ExpressionType::Concerned;
-    } else if (lowerType == "encouraging" || lowerType == "鼓励") {
-        return ExpressionType::Encouraging;
-    } else if (lowerType == "alert" || lowerType == "警觉") {
-        return ExpressionType::Alert;
-    } else if (lowerType == "sad" || lowerType == "悲伤") {
-        return ExpressionType::Sad;
-    } else if (lowerType == "neutral" || lowerType == "中性") {
-        return ExpressionType::Neutral;
-    }
-    
-    qDebug() << "未知的表情类型:" << typeString << "，使用默认中性表情";
-    return ExpressionType::Neutral;
+    if (lowerType == "happy"  || lowerType == "开心")   return ExpressionType::Happy;
+    if (lowerType == "sad"    || lowerType == "悲伤")   return ExpressionType::Sad;
+    if (lowerType == "warning"|| lowerType == "警示")   return ExpressionType::Warning;
+    if (lowerType == "sleep"  || lowerType == "休眠")   return ExpressionType::Sleep;
+    // 默认返回Normal
+    return ExpressionType::Normal;
 }
 
 void Widget::logEmotionTrigger(const QString& reason, ExpressionType type)
@@ -538,17 +523,10 @@ void Widget::logEmotionTrigger(const QString& reason, ExpressionType type)
 
 void Widget::onExpressionDurationTimeout()
 {
-    // 持续时间结束，恢复到上一个表情或中性表情
-    ExpressionType restoreType = (previousExpression != currentExpression) ? 
-                                previousExpression : ExpressionType::Neutral;
-    
+    // 持续时间结束，恢复到上一个表情或Normal
+    ExpressionType restoreType = (previousExpression != currentExpression) ? previousExpression : ExpressionType::Normal;
     qDebug() << "[表情切换] 持续时间结束，恢复到:" << expressionTypeToString(restoreType);
-    
-    if (useImageSequences) {
-        switchToExpressionWithImages(restoreType);
-    } else {
-        animateToExpression(restoreType);
-    }
+    setExpressionBackground(restoreType);
 }
 
 // ==================== Socket服务器相关函数实现 ====================
@@ -832,6 +810,7 @@ void Widget::onNerReadyRead()
     const QString text = QString::fromUtf8(chunk);
     if (!text.isEmpty()) {
         Q_EMIT llmTokens(text, false);
+        resetIdleTimer();
     }
 }
 
@@ -913,6 +892,7 @@ void Widget::updateAsrText(const QString& text, bool isFinal)
     Q_UNUSED(isFinal);
     // 框内仅显示内容，前缀在框上一行标签中
     asrEdit->setPlainText(text);
+    resetIdleTimer();
 }
 
 // ==================== 兼容占位：已移除图像序列功能 ====================
@@ -951,3 +931,17 @@ void Widget::onBlinkTimeout()
     blinkTimer->start(QRandomGenerator::global()->bounded(5000, 10001));
 }
 
+// ========= 新增：空闲定时器槽函数 =========
+void Widget::onIdleTimeout()
+{
+    blinkOnce();
+    setExpressionBackground(ExpressionType::Sleep);
+}
+
+void Widget::resetIdleTimer()
+{
+    if(idleTimer){
+        idleTimer->stop();
+        idleTimer->start();
+    }
+}
