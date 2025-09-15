@@ -46,27 +46,12 @@ Widget::Widget(QWidget *parent)
     ui->setupUi(this);
     setWindowTitle("智能用药提醒机器人表情系统");
     resize(1280, 800); // 适配800x1280屏幕
-    
-    // 插值功能已禁用，无需设置插值资源目录
-    
-    initializeExpressions();
     setupFaceDisplay();
-    // setupInterpolationUI(); // 按用户要求隐藏插值控制区域
-    // setupSocketServerUI();  // 按用户要求隐藏Socket服务器控制区域
-    // createAnimations(); // 动画已移除
-    
-    // 初始化图像序列功能
-    // loadImageSequences(); // 已禁用插值序列
-    
-    // 连接图像动画定时器
-    connect(imageAnimationTimer, &QTimer::timeout, this, &Widget::onImageAnimationStep);
     
     // 连接表情持续时间定时器
     connect(expressionDurationTimer, &QTimer::timeout, this, &Widget::onExpressionDurationTimeout);
     expressionDurationTimer->setSingleShot(true);
-    
-    // 启动时不再自动切换表情，保持全屏背景图
-    
+
     // ======== 新增：空闲定时器 ========
     idleTimer = new QTimer(this);
     idleTimer->setInterval(20000); // 20秒
@@ -103,15 +88,6 @@ Widget::~Widget()
         nerReply = nullptr;
     }
     delete ui;
-}
-
-void Widget::initializeExpressions()
-{
-    // 初始化表情数据
-    expressions[ExpressionType::Happy] = {"😊", "开心", "#FFD700", "成功完成用药、健康状况良好"};
-    expressions[ExpressionType::Warning] = {"⚠️", "警示", "#FF6B6B", "紧急情况、重要提醒"};
-    expressions[ExpressionType::Sad] = {"😢", "难过", "#607D8B", "身体不适、治疗效果不佳"};
-    expressions[ExpressionType::Normal] = {"😐", "普通", "#9E9E9E", "默认状态、日常交互"};
 }
 
 void Widget::cleanupAnimations()
@@ -235,141 +211,6 @@ void Widget::setupFaceDisplay()
     setLayout(root);
 }
 
-void Widget::createAnimations()
-{
-    // 创建缩放动画
-    scaleAnimation = new QPropertyAnimation(faceLabel, "geometry", this);
-    scaleAnimation->setDuration(300);
-    scaleAnimation->setEasingCurve(QEasingCurve::OutBounce);
-    
-    // 创建透明度动画
-    QGraphicsOpacityEffect *opacityEffect = new QGraphicsOpacityEffect(this);
-    faceLabel->setGraphicsEffect(opacityEffect);
-    opacityAnimation = new QPropertyAnimation(opacityEffect, "opacity", this);
-    opacityAnimation->setDuration(200);
-    
-    // 创建序列动画组
-    expressionAnimation = new QSequentialAnimationGroup(this);
-    
-    // 连接动画完成信号
-    connect(expressionAnimation, &QSequentialAnimationGroup::finished, this, &Widget::onAnimationFinished);
-}
-
-void Widget::animateToExpression(ExpressionType type)
-{
-    if (isAnimating || type == currentExpression) {
-        return;
-    }
-    
-    isAnimating = true;
-    ExpressionData newExpressionData = expressions[type];
-    
-    // 停止并清除之前的动画
-    if (expressionAnimation->state() == QAbstractAnimation::Running) {
-        expressionAnimation->stop();
-    }
-    expressionAnimation->clear();
-    
-    // 获取当前几何信息
-    QRect currentGeometry = faceLabel->geometry();
-    QRect shrinkGeometry = currentGeometry;
-    shrinkGeometry.setWidth(currentGeometry.width() * 0.85);
-    shrinkGeometry.setHeight(currentGeometry.height() * 0.85);
-    shrinkGeometry.moveCenter(currentGeometry.center());
-    
-    // 第一阶段：缩小并淡出
-    QPropertyAnimation *shrinkAnim = new QPropertyAnimation(faceLabel, "geometry", expressionAnimation);
-    shrinkAnim->setDuration(200);
-    shrinkAnim->setStartValue(currentGeometry);
-    shrinkAnim->setEndValue(shrinkGeometry);
-    shrinkAnim->setEasingCurve(QEasingCurve::InQuad);
-    
-    QPropertyAnimation *fadeOutAnim = new QPropertyAnimation(faceLabel->graphicsEffect(), "opacity", expressionAnimation);
-    fadeOutAnim->setDuration(200);
-    fadeOutAnim->setStartValue(1.0);
-    fadeOutAnim->setEndValue(0.3);
-    
-    QParallelAnimationGroup *shrinkGroup = new QParallelAnimationGroup(expressionAnimation);
-    shrinkGroup->addAnimation(shrinkAnim);
-    shrinkGroup->addAnimation(fadeOutAnim);
-    
-    // 第二阶段：更换为目标表情对应的静态图像帧（禁用emoji文本）
-    QPropertyAnimation *changeExpression = new QPropertyAnimation(expressionAnimation);
-    changeExpression->setDuration(100);
-    // 预选一帧作为静态显示：优先 current->target 的序列末帧；否则 Neutral->target 的序列末帧
-    QString seqPrimary = QString("%1_to_%2")
-        .arg(expressionTypeToString(currentExpression))
-        .arg(expressionTypeToString(type));
-    QString seqNeutral = QString("Neutral_to_%1").arg(expressionTypeToString(type));
-    QPixmap targetFrame;
-    bool hasFrame = false;
-    if (imageSequenceCache.contains(seqPrimary) && !imageSequenceCache[seqPrimary].isEmpty()) {
-        targetFrame = imageSequenceCache[seqPrimary].last();
-        hasFrame = true;
-    } else if (imageSequenceCache.contains(seqNeutral) && !imageSequenceCache[seqNeutral].isEmpty()) {
-        targetFrame = imageSequenceCache[seqNeutral].last();
-        hasFrame = true;
-    }
-    connect(changeExpression, &QPropertyAnimation::finished, [this, type, newExpressionData, hasFrame, targetFrame]() {
-        // 禁用emoji文本
-        faceLabel->setText("");
-        if (hasFrame) {
-            faceLabel->setPixmap(targetFrame);
-        }
-        faceLabel->setStyleSheet(QString("QLabel { color: #333; background-color: %1; border-radius: 15px; padding: 30px; }").arg(newExpressionData.color));
-        currentExpression = type;
-    });
-    
-    // 第三阶段：放大并淡入
-    QPropertyAnimation *expandAnim = new QPropertyAnimation(faceLabel, "geometry", expressionAnimation);
-    expandAnim->setDuration(300);
-    expandAnim->setEasingCurve(QEasingCurve::OutBounce);
-    expandAnim->setStartValue(shrinkGeometry);
-    expandAnim->setEndValue(currentGeometry);
-    
-    QPropertyAnimation *fadeInAnim = new QPropertyAnimation(faceLabel->graphicsEffect(), "opacity", expressionAnimation);
-    fadeInAnim->setDuration(250);
-    fadeInAnim->setStartValue(0.3);
-    fadeInAnim->setEndValue(1.0);
-    
-    QParallelAnimationGroup *expandGroup = new QParallelAnimationGroup(expressionAnimation);
-    expandGroup->addAnimation(expandAnim);
-    expandGroup->addAnimation(fadeInAnim);
-    
-    // 组合动画序列
-    expressionAnimation->addAnimation(shrinkGroup);
-    expressionAnimation->addAnimation(changeExpression);
-    expressionAnimation->addAnimation(expandGroup);
-    
-    // 开始动画
-    expressionAnimation->start();
-}
-
-void Widget::switchToExpression()
-{
-    QPushButton *senderButton = qobject_cast<QPushButton*>(sender());
-    if (!senderButton) return;
-    
-    // 查找对应的表情类型
-    for (auto it = expressionButtons.begin(); it != expressionButtons.end(); ++it) {
-        if (it.value() == senderButton) {
-            if (useImageSequences) {
-                // 使用图像序列模式
-                switchToExpressionWithImages(it.key());
-            } else {
-                // 使用参数插值模式
-                animateToExpression(it.key());
-            }
-            break;
-        }
-    }
-}
-
-void Widget::onAnimationFinished()
-{
-    isAnimating = false;
-}
-
 // 图像序列相关函数实现
 QString Widget::expressionTypeToString(ExpressionType type)
 {
@@ -389,23 +230,6 @@ QString Widget::getSequencePath(ExpressionType from, ExpressionType to)
     QString toStr = expressionTypeToString(to);
     return QString("%1/%2_to_%3").arg(interpolationBasePath, fromStr, toStr);
 }
-
-void Widget::loadImageSequences()
-{
-    // 图像序列功能已移除
-}
-
-
-void Widget::onImageAnimationStep()
-{
-    // 图像序列动画已移除
-}
-
-void Widget::playImageSequenceAnimation()
-{
-    // 功能已移除
-}
-
 // ========= 新增：根据表达类型设置背景 =========
 void Widget::setExpressionBackground(ExpressionType type)
 {
@@ -456,13 +280,6 @@ void Widget::processEmotionOutput(const EmotionOutput& emotionData)
     setExpressionBackground(targetType);
     // 重新计时空闲定时器
     resetIdleTimer();
-    /*
-    if (useImageSequences) {
-        switchToExpressionWithImages(targetType);
-    } else {
-        animateToExpression(targetType);
-    }
-    */
     
     // 设置持续时间（如果不是永久状态）
     if (emotionData.duration_ms > 0) {
@@ -893,13 +710,6 @@ void Widget::updateAsrText(const QString& text, bool isFinal)
     // 框内仅显示内容，前缀在框上一行标签中
     asrEdit->setPlainText(text);
     resetIdleTimer();
-}
-
-// ==================== 兼容占位：已移除图像序列功能 ====================
-void Widget::switchToExpressionWithImages(ExpressionType targetType)
-{
-    // 图像序列功能已废弃，直接回退到参数插值实现
-    animateToExpression(targetType);
 }
 
 void Widget::blinkOnce()

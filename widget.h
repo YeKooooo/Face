@@ -97,16 +97,6 @@ Q_SIGNALS:
     void asrText(const QString& text, bool isFinal);
     
 private Q_SLOTS:
-    void switchToExpression();
-    void onAnimationFinished();
-    // 删除未用插值相关槽
-    // void onInterpolationSliderChanged(int value);
-    // void onFromExpressionChanged(int index);
-    // void onToExpressionChanged(int index);
-    // void playInterpolationAnimation();
-    // 删除未用的手动播放按钮槽
-    void playImageSequenceAnimation();
-    void onImageAnimationStep();
     void onExpressionDurationTimeout();
 
     // LLM/ASR 显示槽
@@ -124,17 +114,12 @@ private Q_SLOTS:
 
 private:
     void setupFaceDisplay();
-    void createAnimations();
-    void animateToExpression(ExpressionType type);
-    void initializeExpressions();
     void cleanupAnimations();
     // 图像序列相关函数
-    void loadImageSequences();
     void preloadImageSequence(const QString& sequenceName);
     QString getSequencePath(ExpressionType from, ExpressionType to);
     QString expressionTypeToString(ExpressionType type);
     ExpressionType stringToExpressionType(const QString& typeString);
-    void switchToExpressionWithImages(ExpressionType targetType);
     EmotionOutput parseEmotionOutputJson(const QString& jsonString);
     void logEmotionTrigger(const QString& reason, ExpressionType type);
     // 根据表达类型设置背景
