@@ -343,6 +343,8 @@ void Widget::onExpressionDurationTimeout()
     // 持续时间结束，恢复到上一个表情或Normal
     ExpressionType restoreType = (previousExpression != currentExpression) ? previousExpression : ExpressionType::Normal;
     qDebug() << "[表情切换] 持续时间结束，恢复到:" << expressionTypeToString(restoreType);
+    // 恢复表情时触发一次眨眼动画
+    blinkOnce();
     setExpressionBackground(restoreType);
 }
 
@@ -744,8 +746,21 @@ void Widget::onBlinkTimeout()
 // ========= 新增：空闲定时器槽函数 =========
 void Widget::onIdleTimeout()
 {
+    // 休眠模式：停止随机眨眼定时器（避免 blinkOnce 结束后重新启动）
+    if (blinkTimer && blinkTimer->isActive()) {
+        blinkTimer->stop();
+    }
+
+    // 播放一次眨眼动画
     blinkOnce();
-    setExpressionBackground(ExpressionType::Sleep);
+
+    // 在眨眼动画结束后(≈300ms)强制切换为 Sleep，并再次确保定时器已停
+    QTimer::singleShot(350, this, [this]() {
+        setExpressionBackground(ExpressionType::Sleep);
+        if (blinkTimer && blinkTimer->isActive()) {
+            blinkTimer->stop();
+        }
+    });
 }
 
 void Widget::resetIdleTimer()
