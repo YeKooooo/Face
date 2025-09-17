@@ -19,6 +19,7 @@ private:
     QPushButton *homeMapBtn;
     QPushButton *deviceManageBtn;
     QPushButton *consultBtn;
+    QPushButton *exitFullScreenBtn; // 新增：退出全屏按钮
     QPushButton *backBtn;
 };
 

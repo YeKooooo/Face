@@ -29,7 +29,8 @@
 
 namespace {
 inline QString faceRes(const QString &file) {
-    return QDir(QCoreApplication::applicationDirPath()).filePath("../../faceshiftDemo/qt_face/" + file);
+    return QDir(QCoreApplication::applicationDirPath()).filePath("../../faceshiftDemo2/qt_face/" + file);
+    //return QDir(QCoreApplication::applicationDirPath()).filePath("../faceshiftDemo2/qt_face/" + file);
 }
 
 inline int randomBlinkIntervalMs() {
@@ -359,7 +360,6 @@ ExpressionType Widget::stringToExpressionType(const QString& typeString)
     if (lowerType == "happy"  || lowerType == "开心")   return ExpressionType::Happy;
     if (lowerType == "sad"    || lowerType == "悲伤")   return ExpressionType::Sad;
     if (lowerType == "warning"|| lowerType == "警示")   return ExpressionType::Warning;
-    if (lowerType == "sleep"  || lowerType == "休眠")   return ExpressionType::Sleep;
     // 默认返回Normal
     return ExpressionType::Normal;
 }
@@ -372,8 +372,7 @@ void Widget::logEmotionTrigger(const QString& reason, ExpressionType type)
 
 void Widget::onExpressionDurationTimeout()
 {
-    // 持续时间结束，恢复到上一个表情或Normal
-    ExpressionType restoreType = (previousExpression != currentExpression) ? previousExpression : ExpressionType::Normal;
+    ExpressionType restoreType = ExpressionType::Normal;
     qDebug() << "[表情切换] 持续时间结束，恢复到:" << expressionTypeToString(restoreType);
     // 恢复表情时触发一次眨眼动画
     blinkOnceAsChangeExpression(nullptr);
