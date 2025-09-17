@@ -25,6 +25,17 @@
 #include <QRandomGenerator> // 新增：用于随机眨眼
 #include "interfacewidget.h"
 #include <functional>
+#include <QDir>
+
+namespace {
+inline QString faceRes(const QString &file) {
+    return QDir(QCoreApplication::applicationDirPath()).filePath("../../faceshiftDemo/qt_face/" + file);
+}
+
+inline int randomBlinkIntervalMs() {
+    return QRandomGenerator::global()->bounded(4000, 7000 + 1);
+}
+}
 
 Widget::Widget(QWidget *parent)
     : QWidget(parent)
@@ -111,7 +122,7 @@ void Widget::setupFaceDisplay()
     root->setSpacing(0);
     faceLabel = new QLabel("", this);
     faceLabel->setAlignment(Qt::AlignCenter);
-    QPixmap bgPixmap("D:/Java/faceshiftDemo/qt_face/normal.png");
+    QPixmap bgPixmap(faceRes("normal.png"));
     if (!bgPixmap.isNull()) {
         faceLabel->setPixmap(bgPixmap);
         faceLabel->setScaledContents(true);
@@ -120,9 +131,9 @@ void Widget::setupFaceDisplay()
     faceLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
     // ======== 眨眼资源加载 ========
-    openPixmap = QPixmap("D:/Java/faceshiftDemo/qt_face/normal.png");
-    transitionPixmap = QPixmap("D:/Java/faceshiftDemo/qt_face/transition.png");
-    closedPixmap = QPixmap("D:/Java/faceshiftDemo/qt_face/closed.png");
+    openPixmap = QPixmap(faceRes("normal.png"));
+    transitionPixmap = QPixmap(faceRes("transition.png"));
+    closedPixmap = QPixmap(faceRes("closed.png"));
 
     // 初始化眨眼定时器
     blinkTimer = new QTimer(this);
@@ -130,7 +141,7 @@ void Widget::setupFaceDisplay()
     connect(blinkTimer, &QTimer::timeout, this, &Widget::onBlinkTimeout);
 
     // 启动首次随机眨眼
-    blinkTimer->start(QRandomGenerator::global()->bounded(5000, 10001));
+    blinkTimer->start(randomBlinkIntervalMs());
 
     // ========== ASR/LLM 显示区域（浮动） ==========
     QGroupBox* streamGroup = new QGroupBox(this);
@@ -145,7 +156,7 @@ void Widget::setupFaceDisplay()
 
     // ASR 前缀+文本框一行布局
     asrLabel = new QLabel(this);
-    QPixmap userIcon("D:/Java/faceshiftDemo/qt_face/user_icon.png");
+    QPixmap userIcon(faceRes("user_icon.png"));
     if (!userIcon.isNull()) {
         userIcon = userIcon.scaled(32, 32, Qt::KeepAspectRatio, Qt::SmoothTransformation);
         asrLabel->setPixmap(userIcon);
@@ -181,7 +192,7 @@ void Widget::setupFaceDisplay()
 
     // LLM 前缀+文本框三行布局
     llmPrefixLabel = new QLabel(this);
-    QPixmap robotIcon("D:/Java/faceshiftDemo/qt_face/robot_icon.png");
+    QPixmap robotIcon(faceRes("robot_icon.png"));
     if (!robotIcon.isNull()) {
         robotIcon = robotIcon.scaled(32, 32, Qt::KeepAspectRatio, Qt::SmoothTransformation);
         llmPrefixLabel->setPixmap(robotIcon);
@@ -240,11 +251,11 @@ void Widget::setExpressionBackground(ExpressionType type)
 {
     QString path;
     switch(type){
-        case ExpressionType::Happy:    path = "D:/Java/faceshiftDemo/qt_face/emotion_happy.png"; break;
-        case ExpressionType::Sad:      path = "D:/Java/faceshiftDemo/qt_face/emotion_sad.png"; break;
-        case ExpressionType::Warning:  path = "D:/Java/faceshiftDemo/qt_face/emotion_warning.png"; break;
-        case ExpressionType::Sleep:    path = "D:/Java/faceshiftDemo/qt_face/sleep.png"; break;
-        default: /* Normal */          path = "D:/Java/faceshiftDemo/qt_face/normal.png"; break;
+        case ExpressionType::Happy:    path = faceRes("emotion_happy.png"); break;
+        case ExpressionType::Sad:      path = faceRes("emotion_sad.png"); break;
+        case ExpressionType::Warning:  path = faceRes("emotion_warning.png"); break;
+        case ExpressionType::Sleep:    path = faceRes("sleep.png"); break;
+        default: /* Normal */          path = faceRes("normal.png"); break;
     }
     QPixmap pix(path);
     if(!pix.isNull()){
@@ -262,7 +273,7 @@ void Widget::setExpressionBackground(ExpressionType type)
             }
         } else {
             if (!blinkTimer->isActive()) {
-                blinkTimer->start(QRandomGenerator::global()->bounded(5000, 10001));
+                blinkTimer->start(randomBlinkIntervalMs());
             }
         }
     }
@@ -761,7 +772,7 @@ void Widget::blinkOnceAsChangeExpression(const std::function<void()>& callback)
 
                 // 重新启动随机眨眼（仅当当前表情允许眨眼）
                 if (blinkTimer && currentExpression != ExpressionType::Sleep && currentExpression != ExpressionType::Warning) {
-                    blinkTimer->start(QRandomGenerator::global()->bounded(4000, 70001));
+                    blinkTimer->start(randomBlinkIntervalMs());
                 }
             });
         });
@@ -773,7 +784,7 @@ void Widget::onBlinkTimeout()
     blinkOnceAsChangeExpression(nullptr);
     // 重新启动随机眨眼定时器
     if (blinkTimer) {
-        blinkTimer->start(QRandomGenerator::global()->bounded(4000, 70001));
+        blinkTimer->start(randomBlinkIntervalMs());
     }
 }
 
