@@ -26,6 +26,8 @@
 #include <QUrl>
 // 新增：LLM显示采用QPlainTextEdit以支持滚动条
 #include <QPlainTextEdit>
+#include <QGroupBox>
+#include "interfacewidget.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class Widget; }
@@ -235,5 +237,16 @@ private Q_SLOTS:
     // void onPortChanged(int port);
     void onIdleTimeout();
     void resetIdleTimer();
+
+protected:
+    void mousePressEvent(QMouseEvent *event) override;
+
+    enum class Mode { Expression, Interface };
+
+    Mode currentMode;
+
+    InterfaceWidget *interfaceWidget;
+
+    QGroupBox* streamGroup;
 };
 #endif // WIDGET_H

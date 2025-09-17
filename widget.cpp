@@ -23,6 +23,7 @@
 #include <QScrollBar>
 #include <QTextCursor>
 #include <QRandomGenerator> // 新增：用于随机眨眼
+#include "interfacewidget.h"
 
 Widget::Widget(QWidget *parent)
     : QWidget(parent)
@@ -42,6 +43,8 @@ Widget::Widget(QWidget *parent)
     , serverPort(8888)
     , isServerRunning(false)
     , imageAnimationIntervalMs(50)
+    , currentMode(Mode::Expression)
+    , interfaceWidget(nullptr)
 {
     ui->setupUi(this);
     setWindowTitle("智能用药提醒机器人表情系统");
@@ -768,5 +771,26 @@ void Widget::resetIdleTimer()
     if(idleTimer){
         idleTimer->stop();
         idleTimer->start();
+    }
+}
+
+void Widget::mousePressEvent(QMouseEvent *event)
+{
+    Q_UNUSED(event);
+    if (currentMode == Mode::Expression) {
+        // 进入界面模式
+        currentMode = Mode::Interface;
+        if (!interfaceWidget) {
+            interfaceWidget = new InterfaceWidget(this);
+            connect(interfaceWidget, &InterfaceWidget::backClicked, this, [this]() {
+                // 返回表情模式
+                currentMode = Mode::Expression;
+                interfaceWidget->hide();
+                setExpressionBackground(ExpressionType::Normal);
+                resetIdleTimer();
+            });
+        }
+        interfaceWidget->setGeometry(this->rect());
+        interfaceWidget->show();
     }
 }
