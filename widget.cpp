@@ -24,6 +24,7 @@
 #include <QTextCursor>
 #include <QRandomGenerator> // 新增：用于随机眨眼
 #include "interfacewidget.h"
+#include <functional>
 
 Widget::Widget(QWidget *parent)
     : QWidget(parent)
@@ -55,9 +56,9 @@ Widget::Widget(QWidget *parent)
     connect(expressionDurationTimer, &QTimer::timeout, this, &Widget::onExpressionDurationTimeout);
     expressionDurationTimer->setSingleShot(true);
 
-    // ======== 新增：空闲定时器 ========
+    // ======== 睡眠模式 ========
     idleTimer = new QTimer(this);
-    idleTimer->setInterval(20000); // 20秒
+    idleTimer->setInterval(10000); // 10秒
     idleTimer->setSingleShot(true);
     connect(idleTimer, &QTimer::timeout, this, &Widget::onIdleTimeout);
     idleTimer->start();
@@ -143,9 +144,13 @@ void Widget::setupFaceDisplay()
     bigFont.setPointSize(18);
 
     // ASR 前缀+文本框一行布局
-    asrLabel = new QLabel("用户：", this);
-    asrLabel->setFont(bigFont);
-    asrLabel->setStyleSheet("QLabel { color:#ffffff; }");
+    asrLabel = new QLabel(this);
+    QPixmap userIcon("D:/Java/faceshiftDemo/qt_face/user_icon.png");
+    if (!userIcon.isNull()) {
+        userIcon = userIcon.scaled(32, 32, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        asrLabel->setPixmap(userIcon);
+        asrLabel->setFixedSize(userIcon.size());
+    }
 
     asrEdit = new QPlainTextEdit(this);
     asrEdit->setReadOnly(true);
@@ -175,9 +180,13 @@ void Widget::setupFaceDisplay()
     streamLayout->addLayout(asrRow);
 
     // LLM 前缀+文本框三行布局
-    llmPrefixLabel = new QLabel("机器人：", this);
-    llmPrefixLabel->setFont(bigFont);
-    llmPrefixLabel->setStyleSheet("QLabel { color:#ffffff; }");
+    llmPrefixLabel = new QLabel(this);
+    QPixmap robotIcon("D:/Java/faceshiftDemo/qt_face/robot_icon.png");
+    if (!robotIcon.isNull()) {
+        robotIcon = robotIcon.scaled(32, 32, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        llmPrefixLabel->setPixmap(robotIcon);
+        llmPrefixLabel->setFixedSize(robotIcon.size());
+    }
 
     llmEdit = new QPlainTextEdit(this);
     llmEdit->setReadOnly(true);
@@ -226,13 +235,6 @@ QString Widget::expressionTypeToString(ExpressionType type)
         default:                       return "Normal";
     }
 }
-
-QString Widget::getSequencePath(ExpressionType from, ExpressionType to)
-{
-    QString fromStr = expressionTypeToString(from);
-    QString toStr = expressionTypeToString(to);
-    return QString("%1/%2_to_%3").arg(interpolationBasePath, fromStr, toStr);
-}
 // ========= 新增：根据表达类型设置背景 =========
 void Widget::setExpressionBackground(ExpressionType type)
 {
@@ -247,6 +249,22 @@ void Widget::setExpressionBackground(ExpressionType type)
     QPixmap pix(path);
     if(!pix.isNull()){
         faceLabel->setPixmap(pix);
+    }
+
+    // 更新当前表情状态
+    currentExpression = type;
+
+    // Sleep 与 Warning 状态下禁止眨眼，其余状态恢复眨眼
+    if (blinkTimer) {
+        if (type == ExpressionType::Sleep || type == ExpressionType::Warning) {
+            if (blinkTimer->isActive()) {
+                blinkTimer->stop();
+            }
+        } else {
+            if (!blinkTimer->isActive()) {
+                blinkTimer->start(QRandomGenerator::global()->bounded(5000, 10001));
+            }
+        }
     }
 }
 
@@ -279,7 +297,7 @@ void Widget::processEmotionOutput(const EmotionOutput& emotionData)
     currentEmotionOutput = emotionData;
     
     // 切换到目标表情
-    blinkOnce();
+    blinkOnceAsChangeExpression(nullptr);
     setExpressionBackground(targetType);
     // 重新计时空闲定时器
     resetIdleTimer();
@@ -347,7 +365,7 @@ void Widget::onExpressionDurationTimeout()
     ExpressionType restoreType = (previousExpression != currentExpression) ? previousExpression : ExpressionType::Normal;
     qDebug() << "[表情切换] 持续时间结束，恢复到:" << expressionTypeToString(restoreType);
     // 恢复表情时触发一次眨眼动画
-    blinkOnce();
+    blinkOnceAsChangeExpression(nullptr);
     setExpressionBackground(restoreType);
 }
 
@@ -717,52 +735,58 @@ void Widget::updateAsrText(const QString& text, bool isFinal)
     resetIdleTimer();
 }
 
-void Widget::blinkOnce()
+// ==================== 新增：眨眼带回调实现 ====================
+void Widget::blinkOnceAsChangeExpression(const std::function<void()>& callback)
 {
     // 在0.5秒内切换三帧
     if (transitionPixmap.isNull() || closedPixmap.isNull()) {
+        if (callback) callback();
         return; // 资源缺失
     }
 
-    // 使用局部单次定时器链式播放
     faceLabel->setPixmap(transitionPixmap);
-    QTimer::singleShot(100, this, [this]() {
+    QTimer::singleShot(100, this, [this, callback]() {
         faceLabel->setPixmap(closedPixmap);
-        QTimer::singleShot(100, this, [this]() {
+        QTimer::singleShot(100, this, [this, callback]() {
             faceLabel->setPixmap(transitionPixmap);
-            QTimer::singleShot(100, this, [this]() {
-                faceLabel->setPixmap(openPixmap);
-                // 重新启动随机眨眼
-                blinkTimer->start(QRandomGenerator::global()->bounded(5000, 10001));
+            QTimer::singleShot(100, this, [this, callback]() {
+                // 根据是否有回调决定是否睁眼
+                if (callback) {
+                    // 直接执行回调，不再显示睁眼帧
+                    callback();
+                } else {
+                    // 无回调时属于普通眨眼，恢复睁眼帧
+                    faceLabel->setPixmap(openPixmap);
+                }
+
+                // 重新启动随机眨眼（仅当当前表情允许眨眼）
+                if (blinkTimer && currentExpression != ExpressionType::Sleep && currentExpression != ExpressionType::Warning) {
+                    blinkTimer->start(QRandomGenerator::global()->bounded(4000, 70001));
+                }
             });
         });
     });
 }
-
+// 新增：onBlinkTimeout 实现（保持信号槽兼容）
 void Widget::onBlinkTimeout()
 {
-    blinkOnce();
-    // 重新启动随机定时器
-    blinkTimer->start(QRandomGenerator::global()->bounded(5000, 10001));
+    blinkOnceAsChangeExpression(nullptr);
+    // 重新启动随机眨眼定时器
+    if (blinkTimer) {
+        blinkTimer->start(QRandomGenerator::global()->bounded(4000, 70001));
+    }
 }
 
 // ========= 新增：空闲定时器槽函数 =========
 void Widget::onIdleTimeout()
 {
-    // 休眠模式：停止随机眨眼定时器（避免 blinkOnce 结束后重新启动）
+    // 休眠模式：停止随机眨眼定时器
     if (blinkTimer && blinkTimer->isActive()) {
         blinkTimer->stop();
     }
-
-    // 播放一次眨眼动画
-    blinkOnce();
-
-    // 在眨眼动画结束后(≈300ms)强制切换为 Sleep，并再次确保定时器已停
-    QTimer::singleShot(350, this, [this]() {
+    // 播放眨眼动画并在结束后切换为 Sleep
+    blinkOnceAsChangeExpression([this]() {
         setExpressionBackground(ExpressionType::Sleep);
-        if (blinkTimer && blinkTimer->isActive()) {
-            blinkTimer->stop();
-        }
     });
 }
 

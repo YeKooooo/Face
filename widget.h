@@ -109,8 +109,8 @@ private Q_SLOTS:
     void onNerError(QNetworkReply::NetworkError code);
     void updateAsrText(const QString& text, bool isFinal);
 
-    // 眨眼动画（仅播放，不负责重新定时）
-    void blinkOnce();
+    // 眨眼动画（带回调）：动画完成后执行回调
+    void blinkOnceAsChangeExpression(const std::function<void()>& callback);
     // 眨眼定时器触发槽：播放后重新定时
     void onBlinkTimeout();
 
@@ -119,7 +119,6 @@ private:
     void cleanupAnimations();
     // 图像序列相关函数
     void preloadImageSequence(const QString& sequenceName);
-    QString getSequencePath(ExpressionType from, ExpressionType to);
     QString expressionTypeToString(ExpressionType type);
     ExpressionType stringToExpressionType(const QString& typeString);
     EmotionOutput parseEmotionOutputJson(const QString& jsonString);
@@ -146,21 +145,10 @@ private:
     // 状态管理
     ExpressionType currentExpression;
     bool isAnimating;
-    
-    // 移除未用插值控件
-    // QComboBox* fromExpressionCombo;
-    // QComboBox* toExpressionCombo;
-    // QSlider* interpolationSlider;
-    // QPushButton* playAnimationButton;
-    // QSpinBox* animationSpeedSpinBox;
-    
-    // 插值状态（保留起止表情用于序列命名）
+
     ExpressionType fromExpression;
     ExpressionType toExpression;
-    // 移除未用插值定时器与步进
-    // QTimer* interpolationTimer;
-    // int interpolationStep;
-    // int maxInterpolationSteps;
+
     
     // 图像序列相关成员变量
     QMap<QString, QList<QPixmap>> imageSequenceCache;
@@ -169,7 +157,6 @@ private:
     int currentImageFrame;
     QString interpolationBasePath;
     bool useImageSequences; // 优先采用图像序列模式
-    // QPushButton* toggleModeButton; // 已移除
     int imageAnimationIntervalMs; // 新增：图像序列播放间隔(ms)
     
     // EmotionOutput相关成员
@@ -189,15 +176,6 @@ private:
     QPixmap openPixmap;
     QPixmap transitionPixmap;
     QPixmap closedPixmap;
-    
-    // 移除Socket服务器UI控件
-    // QPushButton* startServerButton = nullptr;
-    // QPushButton* stopServerButton = nullptr;
-    // QLabel* serverStatusLabel = nullptr;
-    // QLabel* clientCountLabel = nullptr;
-    // QSpinBox* portSpinBox = nullptr;
-    // QLabel* ipAddressLabel = nullptr;
-    
     // LLM/ASR 文本显示与HTTP接入成员
     QLabel* asrLabel;
     QPlainTextEdit* llmEdit; // 替换为可滚动文本框
@@ -225,16 +203,10 @@ private:
     void stopSocketServer();
     void processSocketData(const QByteArray& data);
     QString getLocalIPAddress();
-    // 移除Socket UI相关私有函数
-    // void setupSocketServerUI();
-    // void updateServerStatus();
-    // void updateClientCount();
+
     
 private Q_SLOTS:
-    // 移除Socket UI相关槽函数
-    // void onStartServerClicked();
-    // void onStopServerClicked();
-    // void onPortChanged(int port);
+
     void onIdleTimeout();
     void resetIdleTimer();
 
