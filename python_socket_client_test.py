@@ -118,20 +118,17 @@ class EmotionOutputClient:
         print("\n🎭 交互式表情测试模式")
         print("支持的表情类型:")
         expressions = [
+            ("warning", "警示", "⚠️"),
             ("happy", "开心", "😊"),
-            ("caring", "关怀", "🤗"),
-            ("concerned", "担忧", "😟"),
-            ("encouraging", "鼓励", "💪"),
-            ("alert", "警觉", "⚠️"),
-            ("sad", "悲伤", "😢"),
-            ("neutral", "中性", "😐")
+            ("sad",   "悲伤", "😢"),
+            ("normal","中性", "😐")
         ]
         
         for i, (eng, chn, emoji) in enumerate(expressions, 1):
             print(f"  {i}. {eng} ({chn}) {emoji}")
         
         print("\n输入命令:")
-        print("  数字1-7: 发送对应表情")
+        print(f"  数字1-{len(expressions)}: 发送对应表情")
         print("  'asr': 发送一条ASR文本")
         print("  'llm': 模拟LLM流式回复")
         print("  'mix': 混合场景（ASR->LLM->表情）")
@@ -152,7 +149,7 @@ class EmotionOutputClient:
                     self.run_llm_demo()
                 elif cmd == 'mix':
                     self.run_mixed_demo()
-                elif cmd.isdigit() and 1 <= int(cmd) <= 7:
+                elif cmd.isdigit() and 1 <= int(cmd) <= len(expressions):
                     idx = int(cmd) - 1
                     expr_type, expr_name, emoji = expressions[idx]
                     duration = int(input(f"持续时间(毫秒,默认3000): ") or "3000")
@@ -174,12 +171,10 @@ class EmotionOutputClient:
         print("\n🤖 自动测试模式启动")
         
         test_cases = [
-            ("caring", 2500, "用户询问用药时间"),
-            ("alert", 4000, "检测到用药延迟"),
-            ("encouraging", 3000, "用户完成用药"),
-            ("happy", 2000, "用药记录更新成功"),
-            ("concerned", 3500, "检测到副作用症状"),
-            ("neutral", 2000, "系统待机状态")
+            ("warning", 4000, "检测到用药延迟"),
+            ("happy",   2500, "用药完毕"),
+            ("sad",     3500, "检测到副作用症状"),
+            ("normal",  2000, "系统待机状态")
         ]
         
         for i, (expr_type, duration, reason) in enumerate(test_cases, 1):
@@ -197,7 +192,7 @@ class EmotionOutputClient:
         """运行压力测试"""
         print(f"\n⚡ 压力测试模式 - 发送 {count} 条消息")
         
-        expressions = ["happy", "caring", "concerned", "encouraging", "alert", "sad", "neutral"]
+        expressions = ["warning", "happy", "sad", "normal"]
         
         for i in range(count):
             expr_type = expressions[i % len(expressions)]
@@ -239,7 +234,7 @@ class EmotionOutputClient:
         print("\n🔀 混合场景：ASR -> 表情Caring -> LLM流 -> 表情Happy")
         self.send_asr("请问我今天的降压药什么时候吃？", True)
         time.sleep(0.2)
-        self.send_emotion_output("caring", 3000, "用户询问用药时间")
+        self.send_emotion_output("warning", 3000, "用户询问用药时间")
         time.sleep(0.5)
         answer = "建议在早餐后30分钟服用，并配合温水。若出现不适，请及时就医。"
         self.send_llm_stream(answer, tokens_per_chunk=3, interval_ms=40)

@@ -266,6 +266,19 @@ void Widget::setExpressionBackground(ExpressionType type)
     // 更新当前表情状态
     currentExpression = type;
 
+    // ===== 管理空闲计时器 =====
+    if (idleTimer) {
+        if (type == ExpressionType::Normal) {
+            if (!idleTimer->isActive()) {
+                idleTimer->start();
+            }
+        } else {
+            if (idleTimer->isActive()) {
+                idleTimer->stop();
+            }
+        }
+    }
+
     // Sleep 与 Warning 状态下禁止眨眼，其余状态恢复眨眼
     if (blinkTimer) {
         if (type == ExpressionType::Sleep || type == ExpressionType::Warning) {
@@ -309,10 +322,12 @@ void Widget::processEmotionOutput(const EmotionOutput& emotionData)
     currentEmotionOutput = emotionData;
     
     // 切换到目标表情
-    blinkOnceAsChangeExpression(nullptr);
-    setExpressionBackground(targetType);
-    // 重新计时空闲定时器
-    resetIdleTimer();
+    // 眨眼动画结束后再切换表情，确保顺序：①眨眼②切换表情
+    blinkOnceAsChangeExpression([this, targetType]() {
+        setExpressionBackground(targetType);
+        // 重新计时空闲定时器
+        resetIdleTimer();
+    });
     
     // 设置持续时间（如果不是永久状态）
     if (emotionData.duration_ms > 0) {
@@ -374,9 +389,10 @@ void Widget::onExpressionDurationTimeout()
 {
     ExpressionType restoreType = ExpressionType::Normal;
     qDebug() << "[表情切换] 持续时间结束，恢复到:" << expressionTypeToString(restoreType);
-    // 恢复表情时触发一次眨眼动画
-    blinkOnceAsChangeExpression(nullptr);
-    setExpressionBackground(restoreType);
+    // 恢复表情时先眨眼，眨眼动画结束后再恢复表情
+    blinkOnceAsChangeExpression([this, restoreType]() {
+        setExpressionBackground(restoreType);
+    });
 }
 
 // ==================== Socket服务器相关函数实现 ====================
@@ -765,8 +781,8 @@ void Widget::blinkOnceAsChangeExpression(const std::function<void()>& callback)
                     // 直接执行回调，不再显示睁眼帧
                     callback();
                 } else {
-                    // 无回调时属于普通眨眼，恢复睁眼帧
-                    faceLabel->setPixmap(openPixmap);
+                    // 无回调时属于普通眨眼，根据当前表情恢复对应背景
+                    setExpressionBackground(currentExpression);
                 }
 
                 // 重新启动随机眨眼（仅当当前表情允许眨眼）
@@ -790,6 +806,11 @@ void Widget::onBlinkTimeout()
 // ========= 新增：空闲定时器槽函数 =========
 void Widget::onIdleTimeout()
 {
+    // 只有在 Normal 表情保持足够时长后才进入睡眠
+    if (currentExpression != ExpressionType::Normal) {
+        return; // 表情已被打断
+    }
+
     // 休眠模式：停止随机眨眼定时器
     if (blinkTimer && blinkTimer->isActive()) {
         blinkTimer->stop();
@@ -802,8 +823,10 @@ void Widget::onIdleTimeout()
 
 void Widget::resetIdleTimer()
 {
-    if(idleTimer){
-        idleTimer->stop();
+    if (!idleTimer) return;
+    idleTimer->stop();
+    // 仅当当前表情为 Normal 时才重新计时进入睡眠
+    if (currentExpression == ExpressionType::Normal) {
         idleTimer->start();
     }
 }
