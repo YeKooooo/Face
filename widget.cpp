@@ -89,6 +89,19 @@ Widget::Widget(QWidget *parent)
     connect(this, &Widget::llmTokens, this, &Widget::onLlmTokens);
     connect(this, &Widget::asrText, this, &Widget::updateAsrText);
     connect(llmTypingTimer, &QTimer::timeout, this, &Widget::onTypingTick);
+    
+    // 初始化searching动画
+    searchingAnimationTimer = new QTimer(this);
+    searchingAnimationTimer->setInterval(200); // 每200ms切换一帧
+    currentSearchingFrame = 0;
+    isSearchingActive = false;
+    connect(searchingAnimationTimer, &QTimer::timeout, this, &Widget::onSearchingAnimationTimeout);
+    
+    // 加载searching图片资源
+    searchingPixmaps[0] = QPixmap(faceRes("searching/1.png"));
+    searchingPixmaps[1] = QPixmap(faceRes("searching/2.png"));
+    searchingPixmaps[2] = QPixmap(faceRes("searching/3.png"));
+    searchingPixmaps[3] = QPixmap(faceRes("searching/4.png"));
 }
 
 Widget::~Widget()
@@ -97,6 +110,11 @@ Widget::~Widget()
     // 新增：HTTP流式资源清理
     if (llmTypingTimer) {
         llmTypingTimer->stop();
+    }
+    
+    // 清理searching动画
+    if (searchingAnimationTimer) {
+        searchingAnimationTimer->stop();
     }
     if (nerReply) {
         disconnect(nerReply, nullptr, this, nullptr);
@@ -703,6 +721,10 @@ void Widget::onLlmTokens(const QString& text, bool isFinal)
     }
     if (!text.isEmpty()) {
         llmPending.append(text);
+        // 第一次收到LLM文本时停止searching动画，恢复所有功能
+        if (isSearchingActive) {
+            stopSearchingAnimation();
+        }
     }
     if (isFinal) {
         llmStreamFinished = true;
@@ -746,7 +768,6 @@ void Widget::updateLlmDisplay()
             bar->setValue(bar->maximum());
         }
     });
-    resetIdleTimer();
 }
 
 void Widget::updateAsrText(const QString& text, bool isFinal)
@@ -754,8 +775,9 @@ void Widget::updateAsrText(const QString& text, bool isFinal)
     Q_UNUSED(isFinal);
     // 框内仅显示内容，前缀在框上一行标签中
     asrEdit->setPlainText(text);
-
-    enterSearchingMode();
+    
+    // 删除旧的眨眼逻辑，启动searching动画
+    startSearchingAnimation();
 }
 
 // ==================== 新增：眨眼带回调实现 ====================
@@ -833,24 +855,6 @@ void Widget::resetIdleTimer()
     if (currentExpression == ExpressionType::Normal) {
         idleTimer->start();
     }
-}
-
-void Widget::enterSearchingMode()
-{
-    // 停止所有相关定时器
-    if (blinkTimer && blinkTimer->isActive()) blinkTimer->stop();
-    if (idleTimer && idleTimer->isActive()) idleTimer->stop();
-    if (expressionDurationTimer && expressionDurationTimer->isActive()) expressionDurationTimer->stop();
-    if (llmTypingTimer && llmTypingTimer->isActive()) llmTypingTimer->stop();
-    if (imageAnimationTimer && imageAnimationTimer->isActive()) imageAnimationTimer->stop();
-
-    // 设置 searching 背景
-    QPixmap pix(faceRes("searching.png"));
-    if (!pix.isNull()) {
-        faceLabel->setPixmap(pix);
-    }
-
-    currentExpression = ExpressionType::Warning; // 使用特殊状态防止眨眼
 }
 
 void Widget::mousePressEvent(QMouseEvent *event)
@@ -939,5 +943,68 @@ void Widget::mousePressEvent(QMouseEvent *event)
         }
         interfaceWidget->setGeometry(this->rect());
         interfaceWidget->show();
+    }
+}
+
+// ==================== Searching 动画相关函数实现 ====================
+
+void Widget::startSearchingAnimation()
+{
+    if (isSearchingActive) {
+        return; // 已经在播放
+    }
+    
+    isSearchingActive = true;
+    currentSearchingFrame = 0;
+    
+    // 禁用所有计时器
+    if (blinkTimer && blinkTimer->isActive()) {
+        blinkTimer->stop();
+    }
+    if (idleTimer && idleTimer->isActive()) {
+        idleTimer->stop();
+    }
+    if (expressionDurationTimer && expressionDurationTimer->isActive()) {
+        expressionDurationTimer->stop();
+    }
+    
+    // 启动searching动画
+    if (!searchingPixmaps[0].isNull()) {
+        faceLabel->setPixmap(searchingPixmaps[0]);
+    }
+    searchingAnimationTimer->start();
+}
+
+void Widget::stopSearchingAnimation()
+{
+    if (!isSearchingActive) {
+        return; // 没有在播放
+    }
+    
+    isSearchingActive = false;
+    searchingAnimationTimer->stop();
+    
+    // 恢复到Normal表情
+    setExpressionBackground(ExpressionType::Normal);
+    
+    // 重新启用所有计时器
+    if (blinkTimer && currentExpression != ExpressionType::Sleep && currentExpression != ExpressionType::Warning) {
+        blinkTimer->start(randomBlinkIntervalMs());
+    }
+    if (idleTimer && currentExpression == ExpressionType::Normal) {
+        idleTimer->start();
+    }
+}
+
+void Widget::onSearchingAnimationTimeout()
+{
+    if (!isSearchingActive) {
+        return;
+    }
+    
+    currentSearchingFrame = (currentSearchingFrame + 1) % 4;
+    
+    if (!searchingPixmaps[currentSearchingFrame].isNull()) {
+        faceLabel->setPixmap(searchingPixmaps[currentSearchingFrame]);
     }
 }

@@ -84,7 +84,6 @@ class Widget : public QWidget
 public:
     Widget(QWidget *parent = nullptr);
     ~Widget();
-    void enterSearchingMode();
 
 public Q_SLOTS:
     // EmotionOutput接口
@@ -115,6 +114,11 @@ private Q_SLOTS:
     void blinkOnceAsChangeExpression(const std::function<void()>& callback);
     // 眨眼定时器触发槽：播放后重新定时
     void onBlinkTimeout();
+    
+    // Searching 动画相关槽函数
+    void onSearchingAnimationTimeout();
+    void startSearchingAnimation();
+    void stopSearchingAnimation();
 
 private:
     void setupFaceDisplay();
@@ -191,6 +195,12 @@ private:
     bool llmStreamFinished;
     int llmCharsPerTick;
     QPlainTextEdit* asrEdit; // 新增ASR编辑框指针
+    
+    // Searching 动画相关成员
+    QTimer* searchingAnimationTimer;
+    QPixmap searchingPixmaps[4];
+    int currentSearchingFrame;
+    bool isSearchingActive;
 private Q_SLOTS:
     // Socket相关槽函数
     void onNewConnection();
