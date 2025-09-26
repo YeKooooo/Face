@@ -38,6 +38,7 @@ InterfaceWidget::InterfaceWidget(QWidget *parent)
     layout->addWidget(backBtn);
 
     connect(backBtn, &QPushButton::clicked, this, &InterfaceWidget::backClicked);
+    connect(registerBtn, &QPushButton::clicked, this, &InterfaceWidget::registerClicked);
     connect(exitFullScreenBtn, &QPushButton::clicked, this, []() {
         if (QWidget *top = QApplication::activeWindow()) {
             top->showNormal();

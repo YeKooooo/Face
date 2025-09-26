@@ -13,6 +13,7 @@ public:
 
 signals:
     void backClicked();
+    void registerClicked();
 
 private:
     QPushButton *registerBtn;

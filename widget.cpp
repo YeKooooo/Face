@@ -58,6 +58,7 @@ Widget::Widget(QWidget *parent)
     , imageAnimationIntervalMs(50)
     , currentMode(Mode::Expression)
     , interfaceWidget(nullptr)
+    , registrationWidget(nullptr)
 {
     ui->setupUi(this);
     setWindowTitle("智能用药提醒机器人表情系统");
@@ -751,6 +752,7 @@ void Widget::updateLlmDisplay()
             bar->setValue(bar->maximum());
         }
     });
+    resetIdleTimer();
 }
 
 void Widget::updateAsrText(const QString& text, bool isFinal)
@@ -823,6 +825,13 @@ void Widget::onIdleTimeout()
 
 void Widget::resetIdleTimer()
 {
+    // 若当前处于睡眠表情，则先眨眼并恢复为 Normal 状态
+    if (currentExpression == ExpressionType::Sleep) {
+        blinkOnceAsChangeExpression([this]() {
+            setExpressionBackground(ExpressionType::Normal);
+        });
+    }
+
     if (!idleTimer) return;
     idleTimer->stop();
     // 仅当当前表情为 Normal 时才重新计时进入睡眠
@@ -845,6 +854,74 @@ void Widget::mousePressEvent(QMouseEvent *event)
                 interfaceWidget->hide();
                 setExpressionBackground(ExpressionType::Normal);
                 resetIdleTimer();
+            });
+            connect(interfaceWidget, &InterfaceWidget::registerClicked, this, [this]() {
+                // 进入注册模式
+                currentMode = Mode::Registration;
+                interfaceWidget->hide();
+                if (!registrationWidget) {
+                    registrationWidget = new RegistrationWidget(this);
+                    connect(registrationWidget, &RegistrationWidget::backToInterface, this, [this]() {
+                        // 返回界面模式
+                        currentMode = Mode::Interface;
+                        registrationWidget->hide();
+                        interfaceWidget->show();
+                    });
+                    connect(registrationWidget, &RegistrationWidget::registrationCompleted, this, [this](const UserRegistrationData& userData) {
+                        // 注册完成，返回表情模式
+                        Q_UNUSED(userData);
+                        currentMode = Mode::Expression;
+                        registrationWidget->hide();
+                        setExpressionBackground(ExpressionType::Normal);
+                        resetIdleTimer();
+                    });
+                }
+                registrationWidget->setGeometry(this->rect());
+                registrationWidget->show();
+                registrationWidget->startRegistration();
+            });
+        }
+        interfaceWidget->setGeometry(this->rect());
+        interfaceWidget->show();
+    } else if (currentMode == Mode::Registration) {
+        // 注册模式下点击返回界面模式
+        currentMode = Mode::Interface;
+        if (registrationWidget) {
+            registrationWidget->hide();
+        }
+        if (!interfaceWidget) {
+            interfaceWidget = new InterfaceWidget(this);
+            connect(interfaceWidget, &InterfaceWidget::backClicked, this, [this]() {
+                // 返回表情模式
+                currentMode = Mode::Expression;
+                interfaceWidget->hide();
+                setExpressionBackground(ExpressionType::Normal);
+                resetIdleTimer();
+            });
+            connect(interfaceWidget, &InterfaceWidget::registerClicked, this, [this]() {
+                // 进入注册模式
+                currentMode = Mode::Registration;
+                interfaceWidget->hide();
+                if (!registrationWidget) {
+                    registrationWidget = new RegistrationWidget(this);
+                    connect(registrationWidget, &RegistrationWidget::backToInterface, this, [this]() {
+                        // 返回界面模式
+                        currentMode = Mode::Interface;
+                        registrationWidget->hide();
+                        interfaceWidget->show();
+                    });
+                    connect(registrationWidget, &RegistrationWidget::registrationCompleted, this, [this](const UserRegistrationData& userData) {
+                        // 注册完成，返回表情模式
+                        Q_UNUSED(userData);
+                        currentMode = Mode::Expression;
+                        registrationWidget->hide();
+                        setExpressionBackground(ExpressionType::Normal);
+                        resetIdleTimer();
+                    });
+                }
+                registrationWidget->setGeometry(this->rect());
+                registrationWidget->show();
+                registrationWidget->startRegistration();
             });
         }
         interfaceWidget->setGeometry(this->rect());

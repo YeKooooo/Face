@@ -2,8 +2,8 @@ QT       += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-# 添加动画模块和网络模块支持
-QT += widgets core gui network
+# 添加动画模块、网络模块和多媒体模块支持
+QT += widgets core gui network multimedia
 
 CONFIG += c++11
 
@@ -21,11 +21,13 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
     main.cpp \
     widget.cpp \
-    interfacewidget.cpp
+    interfacewidget.cpp \
+    registrationwidget.cpp
 
 HEADERS += \
     widget.h \
-    interfacewidget.h
+    interfacewidget.h \
+    registrationwidget.h
 
 FORMS += \
     widget.ui

@@ -28,6 +28,7 @@
 #include <QPlainTextEdit>
 #include <QGroupBox>
 #include "interfacewidget.h"
+#include "registrationwidget.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class Widget; }
@@ -213,11 +214,12 @@ private Q_SLOTS:
 protected:
     void mousePressEvent(QMouseEvent *event) override;
 
-    enum class Mode { Expression, Interface };
+    enum class Mode { Expression, Interface, Registration };
 
     Mode currentMode;
 
     InterfaceWidget *interfaceWidget;
+    RegistrationWidget *registrationWidget;
 
     QGroupBox* streamGroup;
 };
