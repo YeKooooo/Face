@@ -469,9 +469,6 @@ void Widget::onNewConnection()
         
         qDebug() << "[Socket服务器] 新客户端连接:" << clientIP << ":" << clientPort;
         qDebug() << "[Socket服务器] 当前连接数:" << clientSockets.size();
-        
-        // 更新UI显示（Socket UI已移除）
-        // updateClientCount();
     }
 }
 
@@ -487,9 +484,6 @@ void Widget::onClientDisconnected()
         
         qDebug() << "[Socket服务器] 客户端断开连接:" << clientIP << ":" << clientPort;
         qDebug() << "[Socket服务器] 当前连接数:" << clientSockets.size();
-        
-        // 更新UI显示（Socket UI已移除）
-        // updateClientCount();
     }
 }
 
@@ -760,7 +754,8 @@ void Widget::updateAsrText(const QString& text, bool isFinal)
     Q_UNUSED(isFinal);
     // 框内仅显示内容，前缀在框上一行标签中
     asrEdit->setPlainText(text);
-    resetIdleTimer();
+
+    enterSearchingMode();
 }
 
 // ==================== 新增：眨眼带回调实现 ====================
@@ -838,6 +833,24 @@ void Widget::resetIdleTimer()
     if (currentExpression == ExpressionType::Normal) {
         idleTimer->start();
     }
+}
+
+void Widget::enterSearchingMode()
+{
+    // 停止所有相关定时器
+    if (blinkTimer && blinkTimer->isActive()) blinkTimer->stop();
+    if (idleTimer && idleTimer->isActive()) idleTimer->stop();
+    if (expressionDurationTimer && expressionDurationTimer->isActive()) expressionDurationTimer->stop();
+    if (llmTypingTimer && llmTypingTimer->isActive()) llmTypingTimer->stop();
+    if (imageAnimationTimer && imageAnimationTimer->isActive()) imageAnimationTimer->stop();
+
+    // 设置 searching 背景
+    QPixmap pix(faceRes("searching.png"));
+    if (!pix.isNull()) {
+        faceLabel->setPixmap(pix);
+    }
+
+    currentExpression = ExpressionType::Warning; // 使用特殊状态防止眨眼
 }
 
 void Widget::mousePressEvent(QMouseEvent *event)

@@ -84,6 +84,7 @@ class Widget : public QWidget
 public:
     Widget(QWidget *parent = nullptr);
     ~Widget();
+    void enterSearchingMode();
 
 public Q_SLOTS:
     // EmotionOutput接口
