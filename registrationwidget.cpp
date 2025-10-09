@@ -5,6 +5,7 @@
 #include <QDir>
 #include <QDebug>
 #include <QCoreApplication>
+#include <QMouseEvent>
 
 const QString RegistrationWidget::GROUP_ID = "X16BAC";
 
@@ -1971,4 +1972,14 @@ void RegistrationWidget::parseRegistrationResponse(const QByteArray& responseDat
         qDebug() << "用户注册失败:" << code << message;
         showNetworkError("用户注册失败：" + message);
     }
+}
+
+// 重写鼠标事件，阻止事件传播到父控件
+void RegistrationWidget::mousePressEvent(QMouseEvent *event)
+{
+    // 接受事件，阻止传播到父控件Widget
+    event->accept();
+    
+    // 不调用基类的mousePressEvent，避免事件冒泡
+    // QWidget::mousePressEvent(event);
 }

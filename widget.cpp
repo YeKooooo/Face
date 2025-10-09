@@ -89,6 +89,19 @@ Widget::Widget(QWidget *parent)
     connect(this, &Widget::llmTokens, this, &Widget::onLlmTokens);
     connect(this, &Widget::asrText, this, &Widget::updateAsrText);
     connect(llmTypingTimer, &QTimer::timeout, this, &Widget::onTypingTick);
+    
+    // 初始化searching动画
+    searchingAnimationTimer = new QTimer(this);
+    searchingAnimationTimer->setInterval(200); // 每200ms切换一帧
+    currentSearchingFrame = 0;
+    isSearchingActive = false;
+    connect(searchingAnimationTimer, &QTimer::timeout, this, &Widget::onSearchingAnimationTimeout);
+    
+    // 加载searching图片资源
+    searchingPixmaps[0] = QPixmap(faceRes("searching/1.png"));
+    searchingPixmaps[1] = QPixmap(faceRes("searching/2.png"));
+    searchingPixmaps[2] = QPixmap(faceRes("searching/3.png"));
+    searchingPixmaps[3] = QPixmap(faceRes("searching/4.png"));
 }
 
 Widget::~Widget()
@@ -97,6 +110,11 @@ Widget::~Widget()
     // 新增：HTTP流式资源清理
     if (llmTypingTimer) {
         llmTypingTimer->stop();
+    }
+    
+    // 清理searching动画
+    if (searchingAnimationTimer) {
+        searchingAnimationTimer->stop();
     }
     if (nerReply) {
         disconnect(nerReply, nullptr, this, nullptr);
@@ -469,9 +487,6 @@ void Widget::onNewConnection()
         
         qDebug() << "[Socket服务器] 新客户端连接:" << clientIP << ":" << clientPort;
         qDebug() << "[Socket服务器] 当前连接数:" << clientSockets.size();
-        
-        // 更新UI显示（Socket UI已移除）
-        // updateClientCount();
     }
 }
 
@@ -487,9 +502,6 @@ void Widget::onClientDisconnected()
         
         qDebug() << "[Socket服务器] 客户端断开连接:" << clientIP << ":" << clientPort;
         qDebug() << "[Socket服务器] 当前连接数:" << clientSockets.size();
-        
-        // 更新UI显示（Socket UI已移除）
-        // updateClientCount();
     }
 }
 
@@ -546,21 +558,20 @@ void Widget::processSocketData(const QByteArray& data)
             if (type == "llm_stream") {
                 const QString text = obj.value("text").toString();
                 const bool isFinal = obj.value("isFinal").toBool(false) || obj.value("is_final").toBool(false);
+                
+                // 检查是否包含Java端发送的emotion字段（新格式）
+                if (obj.contains("emotion") && !obj.value("emotion").toString().isEmpty()) {
+                    const QString emotion = obj.value("emotion").toString();
+                    processJavaEmotion(emotion);
+                }
+                
                 Q_EMIT llmTokens(text, isFinal);
                 continue;
             }
         }
         
-        qDebug() << "[Socket数据处理] 处理JSON:" << trimmedLine;
-        
-        // 调用现有的processEmotionOutput接口
-        try {
-            processEmotionOutput(trimmedLine);
-        } catch (const std::exception& e) {
-            qDebug() << "[Socket数据处理] JSON处理异常:" << e.what();
-        } catch (...) {
-            qDebug() << "[Socket数据处理] 未知异常";
-        }
+        // 其他格式的JSON数据暂不处理（旧的emotion_output格式已废弃）
+        qDebug() << "[Socket数据处理] 未识别的JSON格式，忽略:" << trimmedLine;
     }
 }
 
@@ -574,6 +585,41 @@ QString Widget::getLocalIPAddress()
         }
     }
     return QHostAddress(QHostAddress::LocalHost).toString();
+}
+
+void Widget::processJavaEmotion(const QString& emotion)
+{
+    // 处理Java端发送的简化emotion字段
+    if (emotion.isEmpty()) {
+        return;
+    }
+    
+    // 映射Java端的小写emotion到ExpressionType
+    ExpressionType targetType = ExpressionType::Normal;
+    QString lowerEmotion = emotion.toLower();
+    
+    if (lowerEmotion == "happy") {
+        targetType = ExpressionType::Happy;
+    } else if (lowerEmotion == "sad") {
+        targetType = ExpressionType::Sad;
+    } else if (lowerEmotion == "warning") {
+        targetType = ExpressionType::Warning;
+    } else {
+        targetType = ExpressionType::Normal;
+    }
+    
+    qDebug() << "[Java情感分析] 收到emotion:" << emotion << "映射为表情:" << expressionTypeToString(targetType);
+    
+    // 停止searching动画并切换表情
+    if (isSearchingActive) {
+        stopSearchingAnimation();
+    }
+    
+    // 眨眼动画结束后切换表情
+    blinkOnceAsChangeExpression([this, targetType]() {
+        setExpressionBackground(targetType);
+        resetIdleTimer();
+    });
 }
 
 // =================== 新增：HTTP流式方法与显示逻辑 ===================
@@ -709,6 +755,10 @@ void Widget::onLlmTokens(const QString& text, bool isFinal)
     }
     if (!text.isEmpty()) {
         llmPending.append(text);
+        // 第一次收到LLM文本时停止searching动画，恢复所有功能
+        if (isSearchingActive) {
+            stopSearchingAnimation();
+        }
     }
     if (isFinal) {
         llmStreamFinished = true;
@@ -752,7 +802,6 @@ void Widget::updateLlmDisplay()
             bar->setValue(bar->maximum());
         }
     });
-    resetIdleTimer();
 }
 
 void Widget::updateAsrText(const QString& text, bool isFinal)
@@ -760,7 +809,9 @@ void Widget::updateAsrText(const QString& text, bool isFinal)
     Q_UNUSED(isFinal);
     // 框内仅显示内容，前缀在框上一行标签中
     asrEdit->setPlainText(text);
-    resetIdleTimer();
+    
+    // 删除旧的眨眼逻辑，启动searching动画
+    startSearchingAnimation();
 }
 
 // ==================== 新增：眨眼带回调实现 ====================
@@ -926,5 +977,68 @@ void Widget::mousePressEvent(QMouseEvent *event)
         }
         interfaceWidget->setGeometry(this->rect());
         interfaceWidget->show();
+    }
+}
+
+// ==================== Searching 动画相关函数实现 ====================
+
+void Widget::startSearchingAnimation()
+{
+    if (isSearchingActive) {
+        return; // 已经在播放
+    }
+    
+    isSearchingActive = true;
+    currentSearchingFrame = 0;
+    
+    // 禁用所有计时器
+    if (blinkTimer && blinkTimer->isActive()) {
+        blinkTimer->stop();
+    }
+    if (idleTimer && idleTimer->isActive()) {
+        idleTimer->stop();
+    }
+    if (expressionDurationTimer && expressionDurationTimer->isActive()) {
+        expressionDurationTimer->stop();
+    }
+    
+    // 启动searching动画
+    if (!searchingPixmaps[0].isNull()) {
+        faceLabel->setPixmap(searchingPixmaps[0]);
+    }
+    searchingAnimationTimer->start();
+}
+
+void Widget::stopSearchingAnimation()
+{
+    if (!isSearchingActive) {
+        return; // 没有在播放
+    }
+    
+    isSearchingActive = false;
+    searchingAnimationTimer->stop();
+    
+    // 恢复到Normal表情
+    setExpressionBackground(ExpressionType::Normal);
+    
+    // 重新启用所有计时器
+    if (blinkTimer && currentExpression != ExpressionType::Sleep && currentExpression != ExpressionType::Warning) {
+        blinkTimer->start(randomBlinkIntervalMs());
+    }
+    if (idleTimer && currentExpression == ExpressionType::Normal) {
+        idleTimer->start();
+    }
+}
+
+void Widget::onSearchingAnimationTimeout()
+{
+    if (!isSearchingActive) {
+        return;
+    }
+    
+    currentSearchingFrame = (currentSearchingFrame + 1) % 4;
+    
+    if (!searchingPixmaps[currentSearchingFrame].isNull()) {
+        faceLabel->setPixmap(searchingPixmaps[currentSearchingFrame]);
     }
 }

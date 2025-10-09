@@ -114,6 +114,10 @@ private:
     void parseFetchUsersResponse(const QByteArray& responseData);
     void parseRegistrationResponse(const QByteArray& responseData);
     
+protected:
+    // 重写鼠标事件，阻止事件传播到父控件
+    void mousePressEvent(QMouseEvent *event) override;
+    
     // UI组件
     QStackedWidget *stackedWidget;
     QLabel *titleLabel;
